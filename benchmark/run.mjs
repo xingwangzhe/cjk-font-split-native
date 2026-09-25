@@ -5,10 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 import subsetWasm from 'subset-font'
 import { build } from 'vite'
-import native from '../index.js'
-import { cjkFontSplit } from '../dist/vite.mjs'
-
-const { subsetFont } = native
+import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
+import { cjkFontSplit } from '@xingwangzhe/cjk-font-split-native/vite'
 const root = path.dirname(fileURLToPath(import.meta.url))
 const fontPath = process.env.CJK_BENCH_FONT ?? path.join(root, '../test/fixtures/DejaVuSans.ttf')
 const fontFaceIndex = Number(process.env.CJK_BENCH_FACE_INDEX ?? 0)

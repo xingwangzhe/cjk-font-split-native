@@ -2,6 +2,8 @@
 
 Rust + N-API CJK font subsetting for Vite. It scans each emitted HTML page, creates a WOFF2 subset, injects a page-scoped `@font-face`, and reuses content-addressed output when pages need the same characters.
 
+The package exposes an ESM-only API. Use `import`; CommonJS `require()` is not exported. NAPI-RS generates the native ESM loader and TypeScript declarations from the Rust API.
+
 ## Vite
 
 ```ts
@@ -44,7 +46,7 @@ Cache files are named by BLAKE3 over font bytes, TTC face index, sorted unique c
 
 Use Bun for package dependencies and scripts, TypeScript 7 for the typed Vite plugin and declaration output, and Cargo for Rust dependencies/builds. `bun run ci` runs formatting, lint, TypeScript compilation, Rust tests and Clippy, the release N-API build, integration tests, and a benchmark. GitHub Actions builds and tests the six supported targets; pushing a matching `vX.Y.Z` tag publishes the combined package with npm Trusted Publishing (OIDC) after CI passes. The repository workflow is `.github/workflows/ci.yml`.
 
-The local `bun run release:placeholder` path publishes a Linux x64 prerelease under the `linux-preview` tag. For a full manual local release, download all six CI artifacts with `gh run download <run-id> --dir artifacts`, then run `bun run release:local`; it validates the binaries, runs `bun pm pack --dry-run`, and publishes with Bun.
+For a full manual local release, download all six CI artifacts with `gh run download <run-id> --dir artifacts`, then run `bun run release:local`; it validates the binaries, runs `bun pm pack --dry-run`, and publishes with Bun.
 
 `bun run benchmark` compares cold native subsets, warm cache hits, repeated page subsets, unique subsets, and `subset-font` WASM on the same font/text. It prints medians from three runs and output sizes; timings depend on hardware and are informational.
 

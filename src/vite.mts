@@ -1,9 +1,7 @@
 import { readFile, readdir, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import native from '../index.js'
-
-const { subsetFont } = native
+import { subsetFont } from '../index.mjs'
 
 export interface CjkFont {
   src: string

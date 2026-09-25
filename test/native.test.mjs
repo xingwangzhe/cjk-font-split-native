@@ -5,9 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { deflateSync } from 'node:zlib'
-import native from '../index.js'
-
-const { subsetFont } = native
+import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const font = await readFile(path.join(here, 'fixtures/DejaVuSans.ttf'))

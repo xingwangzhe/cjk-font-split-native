@@ -2,13 +2,14 @@
   "name": "@xingwangzhe/cjk-font-split-native",
   "version": "0.1.0",
   "description": "Native Rust CJK font subsetting and persistent cache for Vite builds",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "type": "module",
+  "main": "index.mjs",
+  "types": "index.d.mts",
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "require": "./index.js",
-      "default": "./index.js"
+      "types": "./index.d.mts",
+      "import": "./index.mjs",
+      "default": "./index.mjs"
     },
     "./vite": {
       "types": "./dist/vite.d.mts",
@@ -32,8 +33,8 @@
     "font-split"
   ],
   "files": [
-    "index.js",
-    "index.d.ts",
+    "index.mjs",
+    "index.d.mts",
     "dist",
     "cjk-font-split-native.*.node",
     "README.md",
@@ -58,7 +59,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "napi build --platform --release",
+    "build": "napi build --platform --release --esm --js index.mjs --dts index.d.mts",
     "build:ts": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
     "build:debug": "napi build --platform",
@@ -69,7 +70,6 @@
     "test": "node --test test/*.test.mjs",
     "benchmark": "node benchmark/run.mjs",
     "ci": "bun run format:check && bun run lint && cargo fmt -- --check && bun run build:ts && bun run typecheck && cargo test --locked && cargo clippy --locked -- -D warnings && bun run build && bun run test && bun run benchmark",
-    "release:placeholder": "node scripts/publish-placeholder.mjs",
     "release:local": "node scripts/publish-local.mjs"
   },
   "peerDependencies": {

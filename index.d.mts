@@ -9,12 +9,7 @@
  */
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
-export declare function subsetFont(
-  font: Buffer,
-  text: string,
-  cacheDir: string,
-  faceIndex?: number | undefined | null,
-): SubsetResult
+export declare function subsetFont(font: Buffer, text: string, cacheDir: string, faceIndex?: number | undefined | null): SubsetResult
 
 export interface SubsetResult {
   path: string
