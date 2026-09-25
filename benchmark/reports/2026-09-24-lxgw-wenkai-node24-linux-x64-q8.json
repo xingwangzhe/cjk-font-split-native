@@ -1,0 +1,33 @@
+{
+  "node": "v24.21.0",
+  "platform": "linux-x64",
+  "fontFile": "LXGWWenKai-Regular.ttf",
+  "fontBytes": 25645604,
+  "fontFaceIndex": 0,
+  "codepoints": 665,
+  "repetitions": 3,
+  "nativeCold": {
+    "medianMs": 42.75,
+    "outputBytes": 159892
+  },
+  "nativeWarm": {
+    "medianMs": 6.98,
+    "outputBytes": 159844
+  },
+  "crossPageSameSubset": {
+    "medianMs": 7.76,
+    "cacheHitRate": "3/3 after warm-up"
+  },
+  "nativeUniqueSets": {
+    "totalMs": 45.64,
+    "outputBytes": [159844, 159844, 159844]
+  },
+  "subsetFontWasm": {
+    "medianMs": 491.75,
+    "outputBytes": 123408
+  },
+  "viteStaticMultiPageBuild": {
+    "medianMs": 84.81,
+    "pages": 3
+  }
+}

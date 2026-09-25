@@ -1,0 +1,25 @@
+# Auto detect text files and perform LF normalization
+*        text=auto
+
+
+*.ts    text eol=lf merge=union
+*.tsx   text eol=lf merge=union
+*.rs    text eol=lf merge=union
+*.js    text eol=lf merge=union
+*.json  text eol=lf merge=union
+*.debug text eol=lf merge=union
+
+# Generated codes
+index.js                         linguist-detectable=false
+index.d.ts                       linguist-detectable=false
+
+cjk-font-split-native.wasip1.cjs linguist-detectable=false
+cjk-font-split-native.wasip1.d.cts linguist-detectable=false
+cjk-font-split-native.wasip1-browser.js linguist-detectable=false
+cjk-font-split-native.wasip1-deferred.js linguist-detectable=false
+cjk-font-split-native.wasip1-deferred.d.ts linguist-detectable=false
+cjk-font-split-native.wasi.cjs linguist-detectable=false
+cjk-font-split-native.wasi.d.cts linguist-detectable=false
+cjk-font-split-native.wasi-browser.js linguist-detectable=false
+wasi-worker.mjs linguist-detectable=false
+wasi-worker-browser.mjs linguist-detectable=false

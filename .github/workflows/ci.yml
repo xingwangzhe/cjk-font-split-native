@@ -1,0 +1,152 @@
+name: CI
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - run: bun install --frozen-lockfile
+      - run: cargo test --locked
+      - run: bun run format:check
+      - run: bun run lint
+      - run: cargo clippy --locked -- -D warnings
+      - run: bun run build
+      - run: bun run test
+      - run: bun run benchmark
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: macos-15-intel
+            target: x86_64-apple-darwin
+            args: ''
+          - host: macos-latest
+            target: aarch64-apple-darwin
+            args: ''
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+            args: ''
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            args: --use-napi-cross
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            args: -x
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            args: --use-napi-cross
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - run: bun install --frozen-lockfile
+      - uses: mlugg/setup-zig@v2
+        if: contains(matrix.target, 'musl')
+        with:
+          version: 0.15.2
+      - uses: taiki-e/install-action@v2
+        if: contains(matrix.target, 'musl')
+        with:
+          tool: cargo-zigbuild
+      - run: bun run build --target ${{ matrix.target }} ${{ matrix.args }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: addon-${{ matrix.target }}
+          path: cjk-font-split-native.*.node
+          if-no-files-found: error
+  test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - host: macos-15-intel
+            target: x86_64-apple-darwin
+          - host: macos-latest
+            target: aarch64-apple-darwin
+          - host: windows-latest
+            target: x86_64-pc-windows-msvc
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - host: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            musl: true
+          - host: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.host }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bun install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: addon-${{ matrix.target }}
+          path: .
+      - if: ${{ !matrix.musl }}
+        run: bun run test
+      - if: matrix.musl
+        run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --test test/native.test.mjs
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [checks, test]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: bun install --frozen-lockfile
+      - run: npm install --global npm@11.15.0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: addon-*
+          path: native-artifacts
+          merge-multiple: true
+      - run: cp native-artifacts/*.node .
+      - name: Verify release version matches tag
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          test "$PACKAGE_VERSION" = "$TAG_VERSION"
+      - name: Pack and publish all platform binaries
+        run: |
+          bun pm pack --dry-run
+          npm publish --access public --tag latest

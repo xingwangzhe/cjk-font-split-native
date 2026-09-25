@@ -1,0 +1,29 @@
+[package]
+name = "cjk-font-split-native"
+version = "0.1.0"
+edition = "2021"
+authors = ["xingwangzhe <xingwangzhe@outlook.com>"]
+license = "MIT"
+description = "Native CJK font subsetting for Vite"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+blake3 = "1.8.7"
+allsorts = { version = "0.17.0", default-features = false, features = ["flate2_rust"] }
+fontcull = "2.0.1"
+napi = { version = "3.13.0", features = ["napi3"] }
+napi-derive = "3.6.9"
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
+woofwoof = "1.0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+napi-build = "2.5.0"
+
+[profile.release]
+lto = true
+strip = "symbols"
+codegen-units = 1

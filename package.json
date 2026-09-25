@@ -1,0 +1,84 @@
+{
+  "name": "@xingwangzhe/cjk-font-split-native",
+  "version": "0.1.0",
+  "description": "Native Rust CJK font subsetting and persistent cache for Vite builds",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "default": "./index.js"
+    },
+    "./vite": {
+      "types": "./vite.d.ts",
+      "import": "./vite.mjs"
+    }
+  },
+  "license": "MIT",
+  "author": "xingwangzhe <xingwangzhe@outlook.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xingwangzhe/cjk-font-split-native.git"
+  },
+  "keywords": [
+    "font-subset",
+    "cjk",
+    "woff2",
+    "vite",
+    "napi-rs",
+    "rust",
+    "font-split"
+  ],
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "vite.mjs",
+    "vite.d.ts",
+    "cjk-font-split-native.*.node",
+    "README.md",
+    "LICENSE"
+  ],
+  "napi": {
+    "binaryName": "cjk-font-split-native",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu"
+    ]
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "artifacts:assemble": "node scripts/assemble-artifacts.mjs",
+    "format": "oxfmt --write . && cargo fmt",
+    "format:check": "oxfmt --check . && cargo fmt -- --check",
+    "lint": "oxlint .",
+    "test": "node --test test/*.test.mjs",
+    "benchmark": "node benchmark/run.mjs",
+    "ci": "bun run format:check && bun run lint && cargo fmt -- --check && cargo test --locked && cargo clippy --locked -- -D warnings && bun run build && bun run test && bun run benchmark",
+    "release:placeholder": "node scripts/publish-placeholder.mjs",
+    "release:local": "node scripts/publish-local.mjs"
+  },
+  "peerDependencies": {
+    "vite": ">=6"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^3.10.5",
+    "@oxc-node/core": "^0.1.3",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "subset-font": "^2.9.0",
+    "vite": "^8.3.1"
+  }
+}
