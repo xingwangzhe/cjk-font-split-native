@@ -23,6 +23,10 @@ manifest.cpu = ['x64']
 try {
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
 
+  const build = spawnSync('bun', ['run', 'build:ts'], { stdio: 'inherit' })
+  if (build.error) throw build.error
+  if (build.status !== 0) process.exit(build.status ?? 1)
+
   const pack = spawnSync('bun', ['pm', 'pack', '--dry-run'], { stdio: 'inherit' })
   if (pack.error) throw pack.error
   if (pack.status !== 0) process.exit(pack.status ?? 1)

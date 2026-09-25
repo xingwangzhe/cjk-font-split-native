@@ -25,6 +25,8 @@ jobs:
       - run: cargo test --locked
       - run: bun run format:check
       - run: bun run lint
+      - run: bun run build:ts
+      - run: bun run typecheck
       - run: cargo clippy --locked -- -D warnings
       - run: bun run build
       - run: bun run test
@@ -108,6 +110,8 @@ jobs:
         with:
           node-version: 24
       - run: bun install --frozen-lockfile
+      - run: bun run build:ts
+      - run: bun run typecheck
       - uses: actions/download-artifact@v8
         with:
           name: addon-${{ matrix.target }}
@@ -135,6 +139,8 @@ jobs:
           package-manager-cache: false
       - run: bun install --frozen-lockfile
       - run: npm install --global npm@11.15.0
+      - run: bun run build:ts
+      - run: bun run typecheck
       - uses: actions/download-artifact@v8
         with:
           pattern: addon-*

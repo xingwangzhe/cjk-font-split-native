@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { build } from 'vite'
-import { cjkFontSplit } from '../vite.mjs'
+import { cjkFontSplit } from '@xingwangzhe/cjk-font-split-native/vite'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 test('Vite plugin emits one subset for pages with identical text and injects CSS', async () => {

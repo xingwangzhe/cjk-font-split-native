@@ -1,10 +1,25 @@
 import { readFile, readdir, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import native from './index.js'
+import type { Plugin } from 'vite'
+import native from '../index.js'
 
 const { subsetFont } = native
 
-const htmlFiles = async (dir) => {
+export interface CjkFont {
+  src: string
+  family: string
+  faceIndex?: number
+  weight?: string | number
+  style?: string
+}
+
+export interface CjkFontSplitOptions {
+  fonts: readonly CjkFont[]
+  cacheDir?: string
+  verbose?: boolean
+}
+
+const htmlFiles = async (dir: string): Promise<string[]> => {
   const found = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name)
@@ -14,17 +29,24 @@ const htmlFiles = async (dir) => {
   return found
 }
 
-const decodeEntities = (value) =>
+const decodeEntities = (value: string) =>
   value
     .replace(/&#(x[\da-f]+|\d+);/gi, (_, code) =>
       String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)),
     )
-    .replace(
-      /&(?:nbsp|amp|lt|gt|quot|apos);/g,
-      (entity) => ({ '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'" })[entity],
-    )
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos);/g, (entity) => {
+      const namedEntities: Record<string, string> = {
+        '&nbsp;': ' ',
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&quot;': '"',
+        '&apos;': "'",
+      }
+      return namedEntities[entity]
+    })
 
-const cssContent = (css) =>
+const cssContent = (css: string) =>
   [...css.matchAll(/\bcontent\s*:\s*(["'])(.*?)\1\s*(?:!important\s*)?(?:;|})/gis)]
     .map(([, , value]) =>
       value.replace(/\\([\da-f]{1,6})\s?|\\(.)/gi, (_, hex, char) =>
@@ -33,7 +55,7 @@ const cssContent = (css) =>
     )
     .join(' ')
 
-const visibleText = (html) => {
+const visibleText = (html: string) => {
   const inlineCssText = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)]
     .map(([, css]) => cssContent(css))
     .join(' ')
@@ -45,19 +67,19 @@ const visibleText = (html) => {
   return `${inlineCssText} ${decodeEntities(markupText)}`
 }
 
-const attribute = (tag, name) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2]
+const attribute = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2]
 
-const cssString = (value) => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
+const cssString = (value: string) => `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
 
 /**
  * Create per-HTML-page WOFF2 subsets and inject page-scoped @font-face rules.
  * This deliberately runs after Vite has emitted all pages and assets.
  */
-export function cjkFontSplit(options) {
-  if (!options?.fonts?.length) throw new TypeError('cjkFontSplit requires fonts: [{ src, family }]')
+export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
+  if (options.fonts.length === 0) throw new TypeError('cjkFontSplit requires fonts: [{ src, family }]')
   let root = process.cwd()
   let outputDir = path.resolve(root, 'dist')
-  let cacheDir
+  let cacheDir = path.resolve(root, '.cache/cjk-font-split-native')
   return {
     name: 'cjk-font-split-native',
     apply: 'build',

@@ -6,7 +6,7 @@ import { performance } from 'node:perf_hooks'
 import subsetWasm from 'subset-font'
 import { build } from 'vite'
 import native from '../index.js'
-import { cjkFontSplit } from '../vite.mjs'
+import { cjkFontSplit } from '../dist/vite.mjs'
 
 const { subsetFont } = native
 const root = path.dirname(fileURLToPath(import.meta.url))
