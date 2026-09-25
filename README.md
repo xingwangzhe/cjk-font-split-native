@@ -1,10 +1,12 @@
 # @xingwangzhe/cjk-font-split-native
 
-Rust + N-API CJK font subsetting for Vite. It scans each emitted HTML page, creates a WOFF2 subset, injects a page-scoped `@font-face`, and reuses content-addressed output when pages need the same characters.
+[简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-The package exposes an ESM-only API. Use `import`; CommonJS `require()` is not exported. NAPI-RS generates the native ESM loader and TypeScript declarations from the Rust API.
+面向 Vite 的 Rust + N-API CJK 字体子集工具。它扫描构建生成的 HTML 页面，为每个页面提取所需字符，生成 WOFF2 子集并注入页面级 `@font-face`。内容寻址缓存会复用不同页面的相同字符集结果。
 
-## Vite
+本包仅提供 ESM API。请使用 `import`；包不导出 CommonJS `require()` 入口。NAPI-RS 根据 Rust API 生成原生 ESM 加载器和 TypeScript 声明。
+
+## Vite 插件
 
 ```ts
 import { defineConfig } from 'vite'
@@ -14,16 +16,14 @@ export default defineConfig({
   plugins: [
     cjkFontSplit({
       fonts: [{ src: './src/fonts/LXGWWenKai-Regular.ttf', family: 'LXGW WenKai', weight: '400' }],
-      // Optional; defaults to Vite's cacheDir/cjk-font-split-native.
+      // 可选；默认使用 Vite 的 cacheDir/cjk-font-split-native。
       cacheDir: './node_modules/.vite/cjk-font-split-native',
     }),
   ],
 })
 ```
 
-This is a build-only plugin for static multi-page output. It extracts rendered text and CSS `content` strings from each HTML page and its linked stylesheets, emits unique WOFF2 files into `assets/cjk-font-split/`, and injects `@font-face` rules. For apps with client-rendered content, pass that text through your HTML/prerender output or use the low-level API to subset an explicit text corpus.
-
-Supported input formats are TTF, OTF, TTC (with `faceIndex`), WOFF, and WOFF2. Output is WOFF2. `family` must match the CSS family used by the page. Optional `weight` and `style` describe the face; defaults are `400` and `normal`.
+该插件面向静态多页面构建。它提取每个 HTML 页面及其关联样式表中的渲染文本和 CSS `content` 字符串，将唯一的 WOFF2 文件输出到 `assets/cjk-font-split/`，并注入 `@font-face`。对于客户端渲染的内容，请将文本纳入 HTML/预渲染结果，或使用底层 API 传入完整文本。支持 TTF、OTF、TTC（通过 `faceIndex` 选择字面）、WOFF、WOFF2 输入，统一输出 WOFF2。`family` 必须与页面使用的 CSS 字体族名称一致；`weight` 和 `style` 可选，默认分别为 `400` 和 `normal`。
 
 ## Native API
 
@@ -33,21 +33,21 @@ import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
 
 const result = subsetFont(
   await readFile('./LXGWWenKai-Regular.ttf'),
-  '这段文本会被保留',
+  '需要保留的文字',
   './.font-cache',
-  0, // TTC faceIndex, optional
+  0, // TTC faceIndex，可选
 )
 console.log(result) // { path, hash, cacheHit, bytes, characters }
 ```
 
-Cache files are named by BLAKE3 over font bytes, TTC face index, sorted unique codepoints, and the subsetter/normalizer/compression version. WOFF2 uses compression quality 8, selected after benchmarking its speed/size tradeoff. An append-only `manifest.jsonl` maps each key to its WOFF2 file. Cache writes use temporary files and atomic rename; repeated keys reuse the same artifact across pages/builds.
+缓存键由字体内容 BLAKE3、TTC 字面索引、排序去重后的码点以及子集化/规范化/压缩算法版本计算。缓存文件采用该键命名，WOFF2 压缩质量为 8（根据速度和体积基准选择）。追加写入的 `manifest.jsonl` 保存键到 WOFF2 文件的映射。缓存写入使用临时文件和原子重命名；相同输入会跨页面和构建复用结果。
 
-## Development
+## 开发与发布
 
-Use Bun for package dependencies and scripts, TypeScript 7 for the typed Vite plugin and declaration output, and Cargo for Rust dependencies/builds. `bun run ci` runs formatting, lint, TypeScript compilation, Rust tests and Clippy, the release N-API build, integration tests, and a benchmark. GitHub Actions builds and tests the six supported targets; pushing a matching `vX.Y.Z` tag publishes the combined package with npm Trusted Publishing (OIDC) after CI passes. The repository workflow is `.github/workflows/ci.yml`.
+使用 Bun 管理 JS 依赖和脚本，TypeScript 7 为 Vite 插件提供类型并生成声明，Cargo 管理 Rust 依赖和构建。`bun run ci` 执行格式检查、lint、TypeScript 编译、Rust 测试与 Clippy、N-API 发布构建、集成测试和基准测试。GitHub Actions 构建并测试六个目标平台；推送匹配的 `vX.Y.Z` 标签后，工作流会在 CI 通过后使用 npm Trusted Publishing（OIDC）发布完整包，详见 [工作流](.github/workflows/ci.yml)。
 
-For a full manual local release, download all six CI artifacts with `gh run download <run-id> --dir artifacts`, then run `bun run release:local`; it validates the binaries, runs `bun pm pack --dry-run`, and publishes with Bun.
+本地完整发布时，可用 `gh run download <run-id> --dir artifacts` 下载六个平台的 CI 产物，再运行 `bun run release:local`。该脚本会校验二进制、执行 `bun pm pack --dry-run`，并通过 Bun 发布。
 
-`bun run benchmark` compares cold native subsets, warm cache hits, repeated page subsets, unique subsets, and `subset-font` WASM on the same font/text. It prints medians from three runs and output sizes; timings depend on hardware and are informational.
+运行 `bun run benchmark` 可对比冷缓存原生分片、热缓存命中、跨页面重复分片、不同字符集以及 `subset-font` WASM。基准执行三次并报告中位耗时和输出体积；结果会受硬件影响，仅供参考。
 
-The bundled DejaVu Sans test fixture is under its upstream license in `test/fixtures/DEJAVU-LICENSE.txt`; it is excluded from npm package contents.
+测试字体 DejaVu Sans 位于 `test/fixtures/`，遵循上游许可，且不会被打包进 npm 发布内容。
