@@ -38,6 +38,9 @@
     "dist",
     "cjk-font-split-native.*.node",
     "README.md",
+    "README.en.md",
+    "README.ja.md",
+    "README.ko.md",
     "LICENSE"
   ],
   "napi": {
@@ -62,15 +65,15 @@
     "build": "napi build --platform --release --esm --js index.mjs --dts index.d.mts",
     "build:ts": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
-    "build:debug": "napi build --platform",
-    "artifacts:assemble": "node scripts/assemble-artifacts.mjs",
+    "build:debug": "napi build --platform --esm --js index.mjs --dts index.d.mts",
+    "artifacts:assemble": "node scripts/assemble-artifacts.mts",
     "format": "oxfmt --write README*.md benchmark scripts src test package.json tsconfig*.json .github/workflows/ci.yml && cargo fmt",
     "format:check": "oxfmt --check README*.md benchmark scripts src test package.json tsconfig*.json .github/workflows/ci.yml && cargo fmt -- --check",
     "lint": "oxlint .",
-    "test": "node --test test/*.test.mjs",
-    "benchmark": "node benchmark/run.mjs",
+    "test": "node --experimental-strip-types --test test/*.test.mts",
+    "benchmark": "node benchmark/run.mts",
     "ci": "bun run format:check && bun run lint && cargo fmt -- --check && bun run build:ts && bun run typecheck && cargo test --locked && cargo clippy --locked -- -D warnings && bun run build && bun run test && bun run benchmark",
-    "release:local": "node scripts/publish-local.mjs"
+    "release:local": "node scripts/publish-local.mts"
   },
   "peerDependencies": {
     "vite": ">=6"

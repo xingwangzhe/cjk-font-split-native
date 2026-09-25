@@ -6,7 +6,8 @@
     "strict": true,
     "noEmit": true,
     "types": ["node"],
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true
   },
-  "include": ["test/types.test.mts"]
+  "include": ["test/**/*.mts", "scripts/**/*.mts", "benchmark/**/*.mts", "types/**/*.mts"]
 }

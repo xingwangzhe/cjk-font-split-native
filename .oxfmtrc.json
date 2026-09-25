@@ -10,6 +10,8 @@
     "target",
     ".yarn",
     "index.js",
+    "index.mjs",
+    "index.d.mts",
     "package-template.wasi-browser.js",
     "package-template.wasi.cjs",
     "wasi-worker-browser.mjs",

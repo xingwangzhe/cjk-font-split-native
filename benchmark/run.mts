@@ -15,7 +15,7 @@ const corpus =
   Array.from({ length: 600 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join('') +
   'The quick brown fox jumps over the lazy dog. 中文字体子集化性能测试页面内容缓存映射表'
 const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-font-bench-'))
-const measure = async (fn, times = 3) => {
+const measure = async (fn: (index: number) => number | Promise<number>, times = 3) => {
   const samples = []
   let size = 0
   for (let i = 0; i < times; i++) {

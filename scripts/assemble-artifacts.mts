@@ -12,7 +12,7 @@ const expected = [
   'cjk-font-split-native.linux-arm64-gnu.node',
 ]
 
-async function findFiles(dir) {
+async function findFiles(dir: string): Promise<string[]> {
   const found = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const file = path.join(dir, entry.name)
@@ -22,11 +22,11 @@ async function findFiles(dir) {
   return found
 }
 
-let files = []
+let files: string[] = []
 try {
   files = await findFiles(input)
 } catch (error) {
-  if (error.code !== 'ENOENT') throw error
+  if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') throw error
 }
 const sources = new Map()
 for (const file of files) sources.set(path.basename(file), file)

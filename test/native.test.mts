@@ -10,7 +10,7 @@ import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const font = await readFile(path.join(here, 'fixtures/DejaVuSans.ttf'))
 
-const woff1 = (sfnt) => {
+const woff1 = (sfnt: Buffer) => {
   const count = sfnt.readUInt16BE(4)
   const header = Buffer.alloc(44)
   const records = Buffer.alloc(count * 20)
@@ -100,6 +100,7 @@ test('accepts WOFF1 as input', async () => {
 
 const ttcPath = process.env.CJK_TEST_TTC
 test('subsets a selected TTC face', { skip: !ttcPath }, async () => {
+  if (!ttcPath) return
   const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-ttc-'))
   try {
     const result = subsetFont(await readFile(ttcPath), '中文', cache, 1)
