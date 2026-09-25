@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-Rust + N-API CJK font subsetting for Vite. It scans emitted HTML pages, extracts the characters needed by each page, creates WOFF2 subsets, and injects page-scoped `@font-face` rules. A content-addressed cache reuses results when different pages need the same character set.
+Rust + N-API multilingual font subsetting for Vite, with a focus on CJK. It scans visible body text and CSS generated content, preserving each page's Latin letters, accented characters, punctuation, symbols, and CJK text. Head metadata, text attributes, scripts, and fully hidden content are excluded. Content-addressed caching reuses identical character sets across pages.
 
 The package exposes an ESM-only API. Use `import`; CommonJS `require()` is not exported. NAPI-RS generates the native ESM loader and TypeScript declarations from the Rust API.
 
@@ -23,7 +23,7 @@ export default defineConfig({
 })
 ```
 
-This plugin targets static multi-page builds. It extracts rendered text and CSS `content` strings from each HTML page and its linked stylesheets, emits unique WOFF2 files into `assets/cjk-font-split/`, and injects `@font-face` rules. For client-rendered content, include its text in your HTML/prerender output or pass a complete corpus to the low-level API. Supported inputs are TTF, OTF, TTC (select a face with `faceIndex`), WOFF, and WOFF2; output is WOFF2. `family` must match the CSS font family used by the page. Optional `weight` and `style` default to `400` and `normal`.
+This plugin targets static multi-page builds. It extracts visible body text and CSS `content` strings from each HTML page and linked stylesheets, including the page's Latin letters, accented characters, punctuation, symbols, and CJK text. Head metadata and `alt`, `title`, `aria-label`, and other attribute values are excluded. Unique WOFF2 files are emitted into `assets/cjk-font-split/`, and page-scoped `@font-face` rules are injected. For client-rendered content, include its text in your HTML/prerender output or pass a complete corpus to the low-level API. Supported inputs are TTF, OTF, TTC (select a face with `faceIndex`), WOFF, and WOFF2; output is WOFF2. `family` must match the CSS font family used by the page. Optional `weight` and `style` default to `400` and `normal`.
 
 ## Native API
 

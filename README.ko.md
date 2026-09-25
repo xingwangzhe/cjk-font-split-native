@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-Vite용 Rust + N-API CJK 글꼴 서브셋 도구입니다. 빌드된 HTML 페이지를 스캔해 페이지별 필요한 문자를 추출하고 WOFF2 서브셋을 생성한 뒤 페이지 범위의 `@font-face`를 삽입합니다. 콘텐츠 주소 기반 캐시는 여러 페이지에서 같은 문자 집합이 필요할 때 결과를 재사용합니다.
+Vite용 Rust + N-API 다국어 글꼴 서브셋 도구이며 CJK를 중점 지원합니다. 페이지에서 사람이 보는 본문 텍스트와 CSS 생성 콘텐츠를 스캔해 라틴 문자, 악센트 문자, 문장 부호, 기호, CJK 문자를 포함합니다. head 메타데이터, 속성값, 스크립트, 완전히 숨겨진 내용은 제외합니다. 콘텐츠 주소 기반 캐시는 여러 페이지에서 동일한 문자 집합을 재사용합니다.
 
 이 패키지는 ESM API만 제공합니다. `import`를 사용하세요. CommonJS `require()` 진입점은 내보내지 않습니다. NAPI-RS가 Rust API에서 네이티브 ESM 로더와 TypeScript 선언 파일을 생성합니다.
 
@@ -23,7 +23,7 @@ export default defineConfig({
 })
 ```
 
-이 플러그인은 정적 멀티 페이지 빌드를 대상으로 합니다. 각 HTML 페이지와 연결된 스타일시트에서 렌더링 텍스트와 CSS `content` 문자열을 추출하고, 고유한 WOFF2 파일을 `assets/cjk-font-split/`에 출력한 뒤 `@font-face`를 삽입합니다. 클라이언트 렌더링 콘텐츠는 HTML/프리렌더 결과에 텍스트를 포함하거나 저수준 API에 전체 텍스트를 전달하세요. 입력은 TTF, OTF, TTC(`faceIndex`로 글꼴 선택), WOFF, WOFF2를 지원하며 출력은 WOFF2입니다. `family`는 페이지 CSS에서 사용하는 글꼴 패밀리와 일치해야 합니다. `weight`와 `style`은 선택 사항이며 기본값은 각각 `400`, `normal`입니다.
+이 플러그인은 정적 멀티 페이지 빌드를 대상으로 합니다. 각 HTML 페이지의 보이는 본문과 연결된 스타일시트의 CSS `content` 문자열을 추출하며 라틴 문자, 악센트 문자, 문장 부호, 기호, CJK 문자를 포함합니다. head 메타데이터와 `alt`, `title`, `aria-label` 등의 속성값은 제외합니다. 고유한 WOFF2 파일을 `assets/cjk-font-split/`에 출력하고 페이지별 `@font-face`를 삽입합니다. 클라이언트 렌더링 콘텐츠는 HTML/프리렌더 결과에 텍스트를 포함하거나 저수준 API에 전체 텍스트를 전달하세요. 입력은 TTF, OTF, TTC(`faceIndex`로 글꼴 선택), WOFF, WOFF2를 지원하며 출력은 WOFF2입니다. `family`는 페이지 CSS에서 사용하는 글꼴 패밀리와 일치해야 합니다. `weight`와 `style`은 선택 사항이며 기본값은 각각 `400`, `normal`입니다.
 
 ## Native API
 

@@ -1,5 +1,6 @@
 import { readFile, readdir, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { parse, type DefaultTreeAdapterMap } from 'parse5'
 import type { Plugin } from 'vite'
 import { subsetFont } from '../index.mjs'
 
@@ -27,23 +28,6 @@ const htmlFiles = async (dir: string): Promise<string[]> => {
   return found
 }
 
-const decodeEntities = (value: string) =>
-  value
-    .replace(/&#(x[\da-f]+|\d+);/gi, (_, code) =>
-      String.fromCodePoint(code[0].toLowerCase() === 'x' ? parseInt(code.slice(1), 16) : Number(code)),
-    )
-    .replace(/&(?:nbsp|amp|lt|gt|quot|apos);/g, (entity) => {
-      const namedEntities: Record<string, string> = {
-        '&nbsp;': ' ',
-        '&amp;': '&',
-        '&lt;': '<',
-        '&gt;': '>',
-        '&quot;': '"',
-        '&apos;': "'",
-      }
-      return namedEntities[entity]
-    })
-
 const cssContent = (css: string) =>
   [...css.matchAll(/\bcontent\s*:\s*(["'])(.*?)\1\s*(?:!important\s*)?(?:;|})/gis)]
     .map(([, , value]) =>
@@ -53,16 +37,53 @@ const cssContent = (css: string) =>
     )
     .join(' ')
 
+type HtmlNode = DefaultTreeAdapterMap['node']
+
+const nonRenderedElements = new Set(['script', 'style', 'noscript', 'template', 'title'])
+const visuallyHiddenClasses = new Set(['agent-home-summary', 'screen-reader-only', 'sr-only', 'visually-hidden'])
+
+const findBody = (node: HtmlNode): HtmlNode | undefined => {
+  if ('tagName' in node && node.tagName === 'body') return node
+  if ('childNodes' in node) {
+    for (const child of node.childNodes) {
+      const body = findBody(child)
+      if (body) return body
+    }
+  }
+  return undefined
+}
+
+const isHiddenElement = (attrs: Array<{ name: string; value: string }>) => {
+  const attributes = new Map(attrs.map(({ name, value }) => [name, value]))
+  if (attributes.has('hidden') || attributes.has('inert')) return true
+  if ((attributes.get('class') ?? '').split(/\s+/u).some((name) => visuallyHiddenClasses.has(name))) {
+    return true
+  }
+  return /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden|content-visibility\s*:\s*hidden)\s*(?:!important\s*)?(?:;|$)/iu.test(
+    attributes.get('style') ?? '',
+  )
+}
+
+const collectBodyText = (node: HtmlNode, output: string[]) => {
+  if (node.nodeName === '#text' && 'value' in node) {
+    output.push(node.value)
+    return
+  }
+  if (!('childNodes' in node)) return
+  if ('tagName' in node && (nonRenderedElements.has(node.tagName) || isHiddenElement(node.attrs))) {
+    return
+  }
+  for (const child of node.childNodes) collectBodyText(child, output)
+}
+
 const visibleText = (html: string) => {
   const inlineCssText = [...html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi)]
     .map(([, css]) => cssContent(css))
     .join(' ')
-  const markupText = html
-    .replace(/<(script|style|noscript|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/\b(?:alt|title|aria-label)\s*=\s*(["'])(.*?)\1/gi, ' $2 ')
-    .replace(/<[^>]+>/g, ' ')
-  return `${inlineCssText} ${decodeEntities(markupText)}`
+  const body = findBody(parse(html))
+  const bodyText: string[] = []
+  if (body) collectBodyText(body, bodyText)
+  return `${inlineCssText} ${bodyText.join(' ')}`
 }
 
 const attribute = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i'))?.[2]

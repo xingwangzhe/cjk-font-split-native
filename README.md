@@ -2,7 +2,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-面向 Vite 的 Rust + N-API CJK 字体子集工具。它扫描构建生成的 HTML 页面，为每个页面提取所需字符，生成 WOFF2 子集并注入页面级 `@font-face`。内容寻址缓存会复用不同页面的相同字符集结果。
+面向 Vite 的 Rust + N-API 多语言字体子集工具，重点支持 CJK。它扫描构建页面的可见正文和 CSS 生成内容，提取拉丁字母、重音字符、标点、符号及 CJK 字符，生成 WOFF2 子集并注入页面级 `@font-face`。head 元数据、文本属性、脚本和纯隐藏内容不会进入页面字符集；内容寻址缓存会复用不同页面的相同字符集结果。
 
 本包仅提供 ESM API。请使用 `import`；包不导出 CommonJS `require()` 入口。NAPI-RS 根据 Rust API 生成原生 ESM 加载器和 TypeScript 声明。
 
@@ -23,7 +23,7 @@ export default defineConfig({
 })
 ```
 
-该插件面向静态多页面构建。它提取每个 HTML 页面及其关联样式表中的渲染文本和 CSS `content` 字符串，将唯一的 WOFF2 文件输出到 `assets/cjk-font-split/`，并注入 `@font-face`。对于客户端渲染的内容，请将文本纳入 HTML/预渲染结果，或使用底层 API 传入完整文本。支持 TTF、OTF、TTC（通过 `faceIndex` 选择字面）、WOFF、WOFF2 输入，统一输出 WOFF2。`family` 必须与页面使用的 CSS 字体族名称一致；`weight` 和 `style` 可选，默认分别为 `400` 和 `normal`。
+该插件面向静态多页面构建。它提取每个 HTML 页面可见正文及其关联样式表中的 CSS `content` 字符串，包括页面实际使用的拉丁字母、重音字符、标点、符号和 CJK 字符；head 元数据与 `alt`、`title`、`aria-label` 等属性值不会混入。唯一的 WOFF2 文件输出到 `assets/cjk-font-split/`，并注入 `@font-face`。对于客户端渲染的内容，请将文本纳入 HTML/预渲染结果，或使用底层 API 传入完整文本。支持 TTF、OTF、TTC（通过 `faceIndex` 选择字面）、WOFF、WOFF2 输入，统一输出 WOFF2。`family` 必须与页面使用的 CSS 字体族名称一致；`weight` 和 `style` 可选，默认分别为 `400` 和 `normal`。
 
 ## Native API
 

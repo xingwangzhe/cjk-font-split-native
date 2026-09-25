@@ -64,6 +64,23 @@ test('subsets font and reuses content-addressed cache independent of input order
   }
 })
 
+test('subsets Latin accents, punctuation, and common symbols as requested glyphs', async () => {
+  const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-latin-'))
+  const text = 'English café — “quotes”… © 2026 €'
+  try {
+    const result = subsetFont(font, text, cache)
+    assert.equal(result.characters, new Set(text).size)
+    assert.equal(result.cacheHit, false)
+    const woff2 = await readFile(result.path)
+    assert.equal(woff2.toString('ascii', 0, 4), 'wOF2')
+    const repeated = subsetFont(font, [...new Set(text)].reverse().join(''), cache)
+    assert.equal(repeated.cacheHit, true)
+    assert.equal(repeated.hash, result.hash)
+  } finally {
+    await rm(cache, { recursive: true, force: true })
+  }
+})
+
 test('rejects empty text and invalid font bytes', async () => {
   const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-split-'))
   try {

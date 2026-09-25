@@ -1,10 +1,10 @@
 [package]
 name = "cjk-font-split-native"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["xingwangzhe <xingwangzhe@outlook.com>"]
 license = "MIT"
-description = "Native CJK font subsetting for Vite"
+description = "Native multilingual font subsetting for Vite"
 
 [lib]
 crate-type = ["cdylib"]

@@ -1,7 +1,7 @@
 {
   "name": "@xingwangzhe/cjk-font-split-native",
-  "version": "0.1.0",
-  "description": "Native Rust CJK font subsetting and persistent cache for Vite builds",
+  "version": "0.2.0",
+  "description": "Native Rust multilingual font subsetting and persistent cache for Vite builds",
   "type": "module",
   "main": "index.mjs",
   "types": "index.d.mts",
@@ -87,5 +87,8 @@
     "subset-font": "^2.9.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.1"
+  },
+  "dependencies": {
+    "parse5": "8.0.1"
   }
 }
