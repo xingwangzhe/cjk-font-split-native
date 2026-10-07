@@ -1,0 +1,53 @@
+name: Diagnose PGO crash
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.15.2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+      - run: bun install --frozen-lockfile
+      - run: sudo apt-get update && sudo apt-get install -y gdb
+      - name: Reproduce instrumented training crash
+        id: reproduce
+        continue-on-error: true
+        env:
+          CARGO_PROFILE_RELEASE_STRIP: none
+          CARGO_PROFILE_RELEASE_DEBUG: 1
+        run: bun run build:pgo --compare --target x86_64-unknown-linux-gnu --zig-glibc 2.28
+      - name: Capture native loader and training stack
+        if: always()
+        shell: bash
+        env:
+          PGO_BINDING_PATH: ${{ github.workspace }}/target/pgo/x86_64-unknown-linux-gnu/instrumented.node
+          LLVM_PROFILE_FILE: ${{ github.workspace }}/target/pgo/x86_64-unknown-linux-gnu/raw/debug-%m-%p.profraw
+        run: |
+          mkdir -p target/pgo-diagnose
+          gdb --batch -ex 'set pagination off' -ex run -ex 'thread apply all bt' -ex 'info sharedlibrary' --args node scripts/pgo-workload.mjs train > target/pgo-diagnose/backtrace.txt 2>&1
+          cat target/pgo-diagnose/backtrace.txt
+          nm -D target/pgo/x86_64-unknown-linux-gnu/instrumented.node > target/pgo-diagnose/addon-symbols.txt
+          nm -D "$(command -v node)" > target/pgo-diagnose/node-symbols.txt
+          readelf -SW target/pgo/x86_64-unknown-linux-gnu/instrumented.node > target/pgo-diagnose/sections.txt
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: pgo-diagnose
+          path: target/pgo-diagnose
+          if-no-files-found: error
