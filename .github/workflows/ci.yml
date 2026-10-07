@@ -148,6 +148,9 @@ jobs:
         run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.mts
   performance:
     name: Compare runtime against 0.4.9 and previous candidate
+    permissions:
+      contents: read
+      actions: read
     needs: build
     runs-on: ubuntu-latest
     steps:
