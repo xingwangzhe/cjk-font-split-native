@@ -440,7 +440,10 @@ fprintf(stderr, "Missing table index for offset 0x%08x\n",
   // compressed data format (http://www.w3.org/TR/WOFF2/#table_format)
 
   StoreBytes(&compression_buf[0], total_compressed_length, &offset, result);
-  offset = Round4(offset);
+  // The caller may provide uninitialized output storage. Initialize the
+  // alignment padding as well as the payload before returning success.
+  const size_t aligned_offset = Round4(offset);
+  while (offset < aligned_offset) result[offset++] = 0;
 
   StoreBytes(compressed_metadata_buf.data(), compressed_metadata_buf_length,
              &offset, result);

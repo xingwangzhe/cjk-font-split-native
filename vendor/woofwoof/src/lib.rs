@@ -76,8 +76,9 @@ where
         ffi::ComputeTTFToWOFF2Size(data.as_ptr(), data.len(), metadata.as_ptr(), metadata_size)
     };
 
-    let mut buffer = vec![0u8; size];
-    let mut size = buffer.len();
+    let capacity = size;
+    let mut buffer = Vec::<u8>::with_capacity(capacity);
+    let mut size = capacity;
 
     let status = unsafe {
         ffi::ConvertTTFToWOFF2(
@@ -96,7 +97,11 @@ where
         return None;
     }
 
-    buffer.truncate(size);
+    if size > capacity {
+        return None;
+    }
+    // On success the encoder initializes exactly `size` output bytes.
+    unsafe { buffer.set_len(size) };
     Some(buffer)
 }
 

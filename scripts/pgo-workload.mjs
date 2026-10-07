@@ -60,6 +60,15 @@ try {
       2,
     )
     await measure(
+      `${file}.duplicateCold`,
+      async () => {
+        const directory = join(cache, String(index++))
+        const batch = await Promise.all(Array.from({ length: 16 }, () => font.subsetAsync(text, directory)))
+        sink += batch[0].bytes
+      },
+      2,
+    )
+    await measure(
       `${file}.compatCold`,
       () => {
         sink += native.subsetFont(bytes, text, join(cache, String(index++))).bytes

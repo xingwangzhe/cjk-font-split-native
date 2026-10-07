@@ -208,3 +208,22 @@ test('prepared and async APIs preserve TTF/CFF CJK subsets and decode their outp
     await rm(cache, { recursive: true, force: true })
   }
 })
+
+test('coalesces concurrent identical subsets and keeps one manifest entry', async () => {
+  const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-coalesce-'))
+  try {
+    const prepared = new FontSubsetter(font)
+    const results = await Promise.all(
+      Array.from({ length: 32 }, (_, i) => prepared.subsetAsync(i % 2 ? 'café 中文 AV fi' : 'if VA 文中 éfac', cache)),
+    )
+    assert.equal(new Set(results.map((result) => result.hash)).size, 1)
+    assert.equal(results.filter((result) => !result.cacheHit).length, 1)
+    const records = (await readFile(path.join(cache, 'manifest.jsonl'), 'utf8')).trim().split('\n')
+    assert.equal(records.length, 1)
+    const output = await readFile(results[0].path)
+    assert.equal(output.toString('ascii', 0, 4), 'wOF2')
+    assert.ok(results.every((result) => result.bytes === output.length))
+  } finally {
+    await rm(cache, { recursive: true, force: true })
+  }
+})

@@ -146,9 +146,37 @@ jobs:
         run: docker run --rm -v "$PWD:/work" -w /work node:22-bullseye node --experimental-strip-types --test test/native.test.mts
       - if: matrix.musl
         run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.mts
+  performance:
+    name: Compare runtime against published 0.4.9
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          name: addon-x86_64-unknown-linux-gnu
+          path: candidate
+      - name: Fetch published baseline and compare in one runner
+        shell: bash
+        run: |
+          mkdir -p target/runtime-comparison baseline-package
+          npm pack @xingwangzhe/cjk-font-split-native@0.4.9 --ignore-scripts --pack-destination baseline-package
+          tar -xzf baseline-package/*.tgz -C baseline-package
+          cp baseline-package/package/cjk-font-split-native.linux-x64-gnu.node target/runtime-comparison/baseline.node
+          cp candidate/cjk-font-split-native.linux-x64-gnu.node target/runtime-comparison/optimized.node
+          node -e "require('node:fs').writeFileSync('target/runtime-comparison/build.json', JSON.stringify({baseline: 'npm 0.4.9', candidate: process.env.GITHUB_SHA}))"
+          node scripts/compare-pgo.mjs target/runtime-comparison
+      - uses: actions/upload-artifact@v7
+        with:
+          name: runtime-vs-0.4.9
+          path: target/runtime-comparison/*.json
+          if-no-files-found: error
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [checks, test]
+    needs: [checks, test, performance]
     runs-on: ubuntu-latest
     permissions:
       id-token: write

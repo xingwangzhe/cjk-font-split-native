@@ -9,11 +9,14 @@ use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 const ALGORITHM_VERSION: &str = "harfbuzz-14.6;woff-normalizer-1;google-brotli-1.2-woff2-q8";
 const WOFF2_QUALITY: usize = 8;
 static CACHE_LOCK: Mutex<()> = Mutex::new(());
+// Bound synchronization memory while coalescing identical cold requests.
+static SUBSET_LOCKS: LazyLock<[Mutex<()>; 256]> =
+  LazyLock::new(|| std::array::from_fn(|_| Mutex::new(())));
 
 #[napi(object)]
 pub struct SubsetResult {
@@ -98,8 +101,8 @@ impl Task for SubsetTask {
   fn compute(&mut self) -> Result<Self::Output> {
     subset_cached(
       self.prefix.clone(),
-      self.text.clone(),
-      self.cache_dir.clone(),
+      std::mem::take(&mut self.text),
+      std::mem::take(&mut self.cache_dir),
       |chars| self.prepared.subset(chars),
     )
   }
@@ -133,16 +136,19 @@ fn subset_cached(
   }
   let mut sorted: Vec<char> = chars.iter().copied().collect();
   sorted.sort_unstable();
+  // Feed the same canonical bytes in one update instead of one call per scalar.
+  let mut codepoints = Vec::with_capacity(sorted.len() * 4);
   for ch in &sorted {
-    hasher.update(&(*ch as u32).to_le_bytes());
+    codepoints.extend_from_slice(&(*ch as u32).to_le_bytes());
   }
-  let key = hasher.finalize().to_hex().to_string();
+  hasher.update(&codepoints);
+  let digest = hasher.finalize();
+  let key = digest.to_hex().to_string();
   let cache = PathBuf::from(cache_dir);
-  fs::create_dir_all(&cache).map_err(io_error)?;
   let output = cache.join(format!("{key}.woff2"));
 
-  if output.is_file() {
-    let bytes = fs::metadata(&output).map_err(io_error)?.len() as u32;
+  if let Some(metadata) = fs::metadata(&output).ok().filter(|value| value.is_file()) {
+    let bytes = metadata.len() as u32;
     return Ok(SubsetResult {
       path: output.to_string_lossy().into_owned(),
       hash: key,
@@ -152,6 +158,20 @@ fn subset_cached(
     });
   }
 
+  let _subset_guard = SUBSET_LOCKS[digest.as_bytes()[0] as usize]
+    .lock()
+    .map_err(|_| Error::new(Status::GenericFailure, "subset lock poisoned"))?;
+  // Another worker may have completed this exact subset while we waited.
+  if let Some(metadata) = fs::metadata(&output).ok().filter(|value| value.is_file()) {
+    return Ok(SubsetResult {
+      path: output.to_string_lossy().into_owned(),
+      hash: key,
+      cache_hit: true,
+      bytes: metadata.len() as u32,
+      characters: sorted.len() as u32,
+    });
+  }
+  fs::create_dir_all(&cache).map_err(io_error)?;
   let woff2 = render(&chars)?;
   let _guard = CACHE_LOCK
     .lock()
@@ -227,8 +247,11 @@ fn hb_error(error: impl std::fmt::Display) -> Error {
 }
 fn subset_sfnt(face: &hb_subset::FontFace<'_>, chars: &HashSet<char>) -> Result<Vec<u8>> {
   let mut input = hb_subset::SubsetInput::new().map_err(hb_error)?;
-  for ch in chars {
-    input.unicode_set().insert(*ch);
+  {
+    let mut unicodes = input.unicode_set();
+    for ch in chars {
+      unicodes.insert(*ch);
+    }
   }
   let subset = input.subset_font(face).map_err(hb_error)?;
   let bytes = subset.underlying_blob().to_vec();
