@@ -7,9 +7,9 @@ const native = createRequire(import.meta.url)(process.env.PGO_BINDING_PATH)
 const training = process.argv[2] === 'train'
 const results = {}
 let sink = 0
-async function measure(name, fn, iterations = 1) {
+async function measure(name, fn, iterations = 1, calibrate = true) {
   for (let i = 0; i < 2; i++) await fn()
-  if (!training) {
+  if (!training && calibrate) {
     const started = performance.now()
     for (let i = 0; i < iterations; i++) await fn()
     const elapsed = Math.max(performance.now() - started, 0.001)
@@ -47,7 +47,8 @@ try {
       () => {
         sink += new native.FontSubsetter(bytes).subset(text, warmCache).bytes
       },
-      5,
+      3,
+      false,
     )
     await measure(
       `${file}.constructCold`,
@@ -55,6 +56,7 @@ try {
         sink += new native.FontSubsetter(bytes).subset(text, join(cache, String(index++))).bytes
       },
       3,
+      false,
     )
     await measure(
       `${file}.preparedCold`,
