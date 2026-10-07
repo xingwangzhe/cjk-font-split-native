@@ -5,14 +5,13 @@ use napi::bindgen_prelude::{AsyncTask, Buffer};
 use napi::{Env, Error, Result, Status, Task};
 use napi_derive::napi;
 use serde::Serialize;
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-const ALGORITHM_VERSION: &str = "fontcull-2;allsorts-cff-1;woff-normalizer-1;woff2-q8";
+const ALGORITHM_VERSION: &str = "harfbuzz-14.6;woff-normalizer-1;google-brotli-1.2-woff2-q8";
 const WOFF2_QUALITY: usize = 8;
 static CACHE_LOCK: Mutex<()> = Mutex::new(());
 
@@ -41,17 +40,16 @@ pub fn subset_font(
   face_index: Option<u32>,
 ) -> Result<SubsetResult> {
   let face = face_index.unwrap_or(0);
-  subset_cached(font_hasher(&font, face), text, cache_dir, || {
-    normalize_font(&font, face)
-      .map(Cow::Owned)
-      .map_err(|e| Error::new(Status::InvalidArg, e))
+  subset_cached(font_hasher(&font, face), text, cache_dir, |chars| {
+    let normalized = normalize_font(&font, face).map_err(|e| Error::new(Status::InvalidArg, e))?;
+    subset_to_woff2(&normalized, chars)
   })
 }
 
 /// Reuse a validated font and its BLAKE3 prefix across a multi-page build.
 #[napi]
 pub struct FontSubsetter {
-  normalized: Arc<Vec<u8>>,
+  prepared: Arc<PreparedFont>,
   prefix: blake3::Hasher,
 }
 
@@ -63,7 +61,7 @@ impl FontSubsetter {
     let prefix = font_hasher(&font, face);
     let normalized = normalize_font(&font, face).map_err(|e| Error::new(Status::InvalidArg, e))?;
     Ok(Self {
-      normalized: Arc::new(normalized),
+      prepared: Arc::new(PreparedFont::new(normalized)?),
       prefix,
     })
   }
@@ -71,7 +69,7 @@ impl FontSubsetter {
   #[napi(ts_return_type = "Promise<SubsetResult>")]
   pub fn subset_async(&self, text: String, cache_dir: String) -> AsyncTask<SubsetTask> {
     AsyncTask::new(SubsetTask {
-      normalized: Arc::clone(&self.normalized),
+      prepared: Arc::clone(&self.prepared),
       prefix: self.prefix.clone(),
       text,
       cache_dir,
@@ -80,14 +78,14 @@ impl FontSubsetter {
 
   #[napi]
   pub fn subset(&self, text: String, cache_dir: String) -> Result<SubsetResult> {
-    subset_cached(self.prefix.clone(), text, cache_dir, || {
-      Ok(Cow::Borrowed(self.normalized.as_slice()))
+    subset_cached(self.prefix.clone(), text, cache_dir, |chars| {
+      self.prepared.subset(chars)
     })
   }
 }
 
 pub struct SubsetTask {
-  normalized: Arc<Vec<u8>>,
+  prepared: Arc<PreparedFont>,
   prefix: blake3::Hasher,
   text: String,
   cache_dir: String,
@@ -102,7 +100,7 @@ impl Task for SubsetTask {
       self.prefix.clone(),
       self.text.clone(),
       self.cache_dir.clone(),
-      || Ok(Cow::Borrowed(self.normalized.as_slice())),
+      |chars| self.prepared.subset(chars),
     )
   }
 
@@ -120,11 +118,11 @@ fn font_hasher(font: &[u8], face: u32) -> blake3::Hasher {
   hasher
 }
 
-fn subset_cached<'a>(
+fn subset_cached(
   mut hasher: blake3::Hasher,
   text: String,
   cache_dir: String,
-  normalize: impl FnOnce() -> Result<Cow<'a, [u8]>>,
+  render: impl FnOnce(&HashSet<char>) -> Result<Vec<u8>>,
 ) -> Result<SubsetResult> {
   let chars: HashSet<char> = text.chars().collect();
   if chars.is_empty() {
@@ -154,9 +152,7 @@ fn subset_cached<'a>(
     });
   }
 
-  let normalized = normalize()?;
-  let woff2 =
-    subset_to_woff2(&normalized, &chars).map_err(|e| Error::new(Status::GenericFailure, e))?;
+  let woff2 = render(&chars)?;
   let _guard = CACHE_LOCK
     .lock()
     .map_err(|_| Error::new(Status::GenericFailure, "cache lock poisoned"))?;
@@ -180,49 +176,72 @@ fn subset_cached<'a>(
   })
 }
 
-fn subset_to_woff2(font: &[u8], chars: &HashSet<char>) -> std::result::Result<Vec<u8>, String> {
-  use allsorts::binary::read::ReadScope;
-  use allsorts::font::MatchingPresentation;
-  use allsorts::font_data::FontData;
-  use allsorts::subset::{self, CmapTarget, SubsetProfile};
-  use allsorts::tables::FontTableProvider;
-  use allsorts::unicode::VariationSelector;
+// The borrowed HarfBuzz blob points into `data`. Field order drops the face
+// before its backing bytes; all users retain an Arc for the full operation.
+struct PreparedFont {
+  face: Mutex<PreparedFace>,
+  _data: Arc<Vec<u8>>,
+}
+struct PreparedFace(hb_subset::PreprocessedFontFace<'static>);
 
-  let parsed = ReadScope::new(font)
-    .read::<FontData>()
-    .map_err(|e| format!("font parse failed: {e:?}"))?;
-  let provider = parsed
-    .table_provider(0)
-    .map_err(|e| format!("font tables unavailable: {e:?}"))?;
-  if provider.has_table(allsorts::tag::CFF) || provider.has_table(allsorts::tag::CFF2) {
-    let mut mapped_font =
-      allsorts::Font::new(provider).map_err(|e| format!("CFF cmap parse failed: {e:?}"))?;
-    let mut glyphs = Vec::with_capacity(chars.len() + 1);
-    glyphs.push(0);
-    for ch in chars {
-      let (glyph, _) = mapped_font.lookup_glyph_index(
-        *ch,
-        MatchingPresentation::NotRequired,
-        Option::<VariationSelector>::None,
-      );
-      glyphs.push(glyph);
-    }
-    glyphs.sort_unstable();
-    glyphs.dedup();
-    let subset = subset::subset(
-      &mapped_font.font_table_provider,
-      &glyphs,
-      &SubsetProfile::Minimal,
-      CmapTarget::Unicode,
-    )
-    .map_err(|e| format!("CFF subset failed: {e:?}"))?;
-    woofwoof::compress(&subset, "", WOFF2_QUALITY, true)
-      .ok_or_else(|| "CFF WOFF2 compression failed".to_string())
-  } else {
-    let subset = fontcull::subset_font_data(font, chars, &[]).map_err(|e| e.to_string())?;
-    woofwoof::compress(&subset, "", WOFF2_QUALITY, true)
-      .ok_or_else(|| "WOFF2 compression failed".to_string())
+// HarfBuzz faces are reference-counted and not thread-affine. We only move the
+// handle across workers; the mutex serializes every operation on this face.
+unsafe impl Send for PreparedFace {}
+
+impl PreparedFont {
+  fn new(data: Vec<u8>) -> Result<Self> {
+    let data = Arc::new(data);
+    let blob = hb_subset::Blob::from_bytes(&data).map_err(hb_error)?;
+    let face = hb_subset::FontFace::new(blob).map_err(hb_error)?;
+    let prepared = face.preprocess_for_subsetting();
+    // `data` is immutable, owns the allocation, and outlives the face above.
+    let prepared = unsafe {
+      std::mem::transmute::<
+        hb_subset::PreprocessedFontFace<'_>,
+        hb_subset::PreprocessedFontFace<'static>,
+      >(prepared)
+    };
+    drop(face);
+    Ok(Self {
+      face: Mutex::new(PreparedFace(prepared)),
+      _data: data,
+    })
   }
+  fn subset(&self, chars: &HashSet<char>) -> Result<Vec<u8>> {
+    let subset = {
+      let prepared = self
+        .face
+        .lock()
+        .map_err(|_| Error::new(Status::GenericFailure, "font lock poisoned"))?;
+      subset_sfnt(&prepared.0, chars)?
+    };
+    compress_subset(&subset)
+  }
+}
+
+fn hb_error(error: impl std::fmt::Display) -> Error {
+  Error::new(
+    Status::GenericFailure,
+    format!("HarfBuzz subset failed: {error}"),
+  )
+}
+fn subset_sfnt(face: &hb_subset::FontFace<'_>, chars: &HashSet<char>) -> Result<Vec<u8>> {
+  let mut input = hb_subset::SubsetInput::new().map_err(hb_error)?;
+  for ch in chars {
+    input.unicode_set().insert(*ch);
+  }
+  let subset = input.subset_font(face).map_err(hb_error)?;
+  let bytes = subset.underlying_blob().to_vec();
+  Ok(bytes)
+}
+fn compress_subset(subset: &[u8]) -> Result<Vec<u8>> {
+  woofwoof::compress(subset, "", WOFF2_QUALITY, true)
+    .ok_or_else(|| Error::new(Status::GenericFailure, "WOFF2 compression failed"))
+}
+fn subset_to_woff2(font: &[u8], chars: &HashSet<char>) -> Result<Vec<u8>> {
+  let blob = hb_subset::Blob::from_bytes(font).map_err(hb_error)?;
+  let face = hb_subset::FontFace::new(blob).map_err(hb_error)?;
+  compress_subset(&subset_sfnt(&face, chars)?)
 }
 
 fn io_error(error: std::io::Error) -> Error {
@@ -241,8 +260,8 @@ fn read_u32(data: &[u8], at: usize) -> std::result::Result<u32, String> {
 
 fn normalize_font(data: &[u8], face: u32) -> std::result::Result<Vec<u8>, String> {
   match data.get(..4) {
-    Some(b"wOF2") => fontcull::decompress_font(data)
-      .map_err(|e| e.to_string())
+    Some(b"wOF2") => woofwoof::decompress(data)
+      .ok_or_else(|| "WOFF2 decode failed".to_string())
       .or_else(|_| normalize_woff2_allsorts(data))
       .map_err(|e| format!("WOFF2 decode failed: {e}")),
     Some(b"wOFF") => {
@@ -453,6 +472,66 @@ mod tests {
   use flate2::write::ZlibEncoder;
   use flate2::Compression;
 
+  fn table<'a>(font: &'a [u8], tag: &[u8; 4]) -> &'a [u8] {
+    for i in 0..read_u16(font, 4).unwrap() as usize {
+      let rec = 12 + i * 16;
+      if &font[rec..rec + 4] == tag {
+        let offset = read_u32(font, rec + 8).unwrap() as usize;
+        let len = read_u32(font, rec + 12).unwrap() as usize;
+        return &font[offset..offset + len];
+      }
+    }
+    panic!("missing table");
+  }
+  fn metric(font: &[u8], glyph: usize, vertical: bool) -> (u16, i16) {
+    let header = table(font, if vertical { b"vhea" } else { b"hhea" });
+    let metrics = table(font, if vertical { b"vmtx" } else { b"hmtx" });
+    let count = read_u16(header, 34).unwrap() as usize;
+    let advance = read_u16(metrics, glyph.min(count - 1) * 4).unwrap();
+    let offset = if glyph < count {
+      glyph * 4 + 2
+    } else {
+      count * 4 + (glyph - count) * 2
+    };
+    (
+      advance,
+      i16::from_be_bytes([metrics[offset], metrics[offset + 1]]),
+    )
+  }
+  #[test]
+  fn ttf_and_cff_subsets_preserve_cjk_vertical_metrics_and_ligature_closure() {
+    for original in [
+      include_bytes!("../test/fixtures/SyntheticCJK.ttf").as_slice(),
+      include_bytes!("../test/fixtures/SyntheticCJK.otf").as_slice(),
+    ] {
+      let chars: HashSet<char> = "中文fiAV".chars().collect();
+      let prepared = PreparedFont::new(original.to_vec()).unwrap();
+      let encoded = prepared.subset(&chars).unwrap();
+      let decoded = normalize_font(&encoded, 0).unwrap();
+      let source_face =
+        hb_subset::FontFace::new(hb_subset::Blob::from_bytes(original).unwrap()).unwrap();
+      let subset_face =
+        hb_subset::FontFace::new(hb_subset::Blob::from_bytes(&decoded).unwrap()).unwrap();
+      let source_map = source_face.nominal_glyph_mapping().unwrap();
+      let subset_map = subset_face.nominal_glyph_mapping().unwrap();
+      assert_eq!(subset_face.covered_codepoints().unwrap().len(), chars.len());
+      // Six requested characters + .notdef + the GSUB fi ligature.
+      assert_eq!(subset_face.glyph_count(), chars.len() + 2);
+      for ch in chars {
+        let source = source_map.get(ch).unwrap() as usize;
+        let subset = subset_map.get(ch).unwrap() as usize;
+        assert_eq!(
+          metric(original, source, false),
+          metric(&decoded, subset, false)
+        );
+        assert_eq!(
+          metric(original, source, true),
+          metric(&decoded, subset, true)
+        );
+      }
+    }
+  }
+
   fn make_woff(sfnt: &[u8]) -> Vec<u8> {
     let num = read_u16(sfnt, 4).unwrap() as usize;
     let mut out = vec![0u8; 44 + num * 20];
@@ -496,7 +575,7 @@ mod tests {
     let source = fs::read(path).unwrap();
     let normalized = normalize_woff(&make_woff(&source)).unwrap();
     assert_eq!(&normalized[..4], &source[..4]);
-    assert!(fontcull::subset_font_to_woff2(&normalized, &HashSet::from(['A']), &[]).is_ok());
+    assert!(subset_to_woff2(&normalized, &HashSet::from(['A'])).is_ok());
   }
 
   #[test]

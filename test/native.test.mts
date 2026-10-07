@@ -182,3 +182,29 @@ test('async subsets preserve bytes and atomically share concurrent cache writes'
     await rm(syncCache, { recursive: true, force: true })
   }
 })
+
+test('prepared and async APIs preserve TTF/CFF CJK subsets and decode their output', async () => {
+  const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-formats-'))
+  try {
+    for (const suffix of ['ttf', 'otf']) {
+      const original = await readFile(path.join(here, 'fixtures', `SyntheticCJK.${suffix}`))
+      const prepared = new FontSubsetter(original)
+      for (const text of ['中文fiAV', '中文01']) {
+        const legacy = subsetFont(original, text, path.join(cache, 'legacy', suffix))
+        const actual = await prepared.subsetAsync(text, path.join(cache, 'prepared', suffix))
+        assert.equal(actual.hash, legacy.hash)
+        assert.deepEqual(await readFile(actual.path), await readFile(legacy.path))
+        const decoded = subsetFont(await readFile(actual.path), text, path.join(cache, 'roundtrip', suffix))
+        assert.ok(decoded.bytes > 0)
+        const fromWoff = new FontSubsetter(woff1(original))
+        const normalized = await fromWoff.subsetAsync(text, path.join(cache, 'woff1', suffix))
+        assert.deepEqual(await readFile(normalized.path), await readFile(actual.path))
+        const fromWoff2 = new FontSubsetter(await readFile(actual.path))
+        const resubset = await fromWoff2.subsetAsync(text, path.join(cache, 'woff2', suffix))
+        assert.ok(resubset.bytes > 0)
+      }
+    }
+  } finally {
+    await rm(cache, { recursive: true, force: true })
+  }
+})

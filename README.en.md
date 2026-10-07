@@ -65,3 +65,9 @@ const second = prepared.subset('Second page 第二页', cacheDir)
 ```
 
 `await prepared.subsetAsync(text, cacheDir)` runs subsetting in the Node worker pool. Tasks share the prepared font, compression runs concurrently, and cache/manifest writes remain atomic and serialized. Use at most four concurrent tasks. The synchronous API remains compatible.
+
+### Native backend and cache version
+
+0.4.0 uses bundled HarfBuzz 14.6 for subsetting and Google Brotli 1.2 through a local woofwoof adapter for WOFF2. Quality remains 8 and font transforms remain enabled. `FontSubsetter` reuses preprocessed subset accelerators; a short mutex protects one font face while compression runs concurrently in the worker pool. WOFF/WOFF2 inputs are decoded to SFNT and TTC faces extracted before reusable HarfBuzz preprocessing. Original TrueType/CFF outlines are preserved without lossy curve conversion. No system HarfBuzz/Brotli installation is required.
+
+The algorithm fingerprint changed, so old font caches are not reused. Filenames and WOFF2 bytes differ between 0.3.x and 0.4.0; synchronous, prepared and async APIs within 0.4.0 still produce matching results. HarfBuzz correctly rebuilds vertical metrics rather than retaining excess `vmtx` data. Bidirectional mirroring closure can add the corresponding mirrored symbols to the actual cmap. Third-party licenses are shipped with the npm package.

@@ -32,6 +32,10 @@ try {
   const prepared = new FontSubsetter(font, fontFaceIndex)
   const prepareMs = performance.now() - prepareStarted
   const preparedWarm = await measure(() => prepared.subset(corpus, path.join(cache, 'prepared')).bytes)
+  const preparedCold = await measure((i) => prepared.subset(corpus, path.join(cache, `prepared-cold-${i}`)).bytes)
+  const preparedAsyncCold = await measure(
+    async (i) => (await prepared.subsetAsync(corpus, path.join(cache, `prepared-async-cold-${i}`))).bytes,
+  )
   const nativeCold = await measure((i) => {
     const result = subsetFont(
       font,
@@ -54,7 +58,7 @@ try {
   const unique = Array.from(
     { length: 3 },
     (_, i) =>
-      subsetFont(font, `${corpus}${String.fromCharCode(0x4e00 + i)}`, path.join(cache, 'unique'), fontFaceIndex).bytes,
+      subsetFont(font, `${corpus}${String.fromCharCode(0x6000 + i)}`, path.join(cache, 'unique'), fontFaceIndex).bytes,
   )
   const uniqueMs = Number((performance.now() - uniqueStart).toFixed(2))
 
@@ -93,7 +97,12 @@ try {
         fontFaceIndex,
         codepoints: [...corpus].length,
         repetitions: 3,
-        prepared: { prepareMs: Number(prepareMs.toFixed(2)), warm: preparedWarm },
+        prepared: {
+          prepareMs: Number(prepareMs.toFixed(2)),
+          cold: preparedCold,
+          asyncCold: preparedAsyncCold,
+          warm: preparedWarm,
+        },
         nativeCold,
         nativeWarm,
         crossPageSameSubset: { medianMs: samePageCache.medianMs, cacheHitRate: `${cacheHits}/3 after warm-up` },
