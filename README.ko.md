@@ -51,3 +51,25 @@ JS 의존성과 스크립트는 Bun, Vite 플러그인 타입과 선언 생성�
 `bun run benchmark`는 네이티브 콜드 캐시, 웜 캐시 적중, 페이지 간 중복 서브셋, 서로 다른 문자 집합, `subset-font` WASM을 비교합니다. 3회 실행의 중앙값과 출력 크기를 보여주며, 결과는 하드웨어에 따라 달라지는 참고 정보입니다.
 
 테스트용 DejaVu Sans 글꼴은 상위 라이선스에 따라 `test/fixtures/`에 있으며 npm 패키지에는 포함되지 않습니다.
+
+## LICENSES와 적용 범위
+
+프로젝트의 Rust / JavaScript 코드는 **MIT**입니다. GitHub가 식별할 수 있도록 루트 [LICENSE](LICENSE)에 표준 원문을 유지합니다. 아래 라이선스는 각 타사 구성 요소에 적용되며 프로젝트 전체의 추가 라이선스가 아닙니다. `OR`는 원저작자의 선택 가능한 라이선스입니다. 정확한 버전, 저작권, 원문 및 NOTICE는 [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt)에 포함됩니다.
+
+| 组件 / Component                                       | 许可 / License                     | 全文 / Full text                                              |
+| ------------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------- |
+| Project Rust / JS code                                 | MIT                                | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
+| HarfBuzz 14.6                                          | MIT-style (original text retained) | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
+| Google WOFF2                                           | MIT                                | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
+| Google Brotli 1.2                                      | MIT                                | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
+| compu-brotli-sys                                       | Boost Software License 1.0         | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
+| allsorts and Unicode category/combining/joining crates | Apache-2.0                         | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
+| alloc-no-stdlib / alloc-stdlib                         | BSD-3-Clause                       | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
+| libloading                                             | ISC                                | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
+| Unicode data in unicode-ident                          | Unicode-3.0                        | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
+| License option for blake3 and related crates           | CC0-1.0                            | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
+| License option for constant_time_eq                    | MIT-0                              | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt)               |
+| License option for tinyvec                             | Zlib                               | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
+| License option for adler2                              | 0BSD                               | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
+
+The npm package ships `LICENSES/` and the complete third-party notice file. Input fonts and generated subsets retain their font-specific licenses, reserved names and redistribution conditions; this tool’s MIT does not replace them. Test fonts retain their own licenses and are excluded from npm. GitHub’s primary-license display is separate from this component inventory.

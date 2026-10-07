@@ -71,3 +71,25 @@ const second = prepared.subset('Second page 第二页', cacheDir)
 0.4.2 使用内嵌 HarfBuzz 14.6 做字体子集提取，并通过本地 woofwoof 适配层使用 Google Brotli 1.2 编码 WOFF2。Brotli 质量仍为 8，未关闭字体变换或丢弃字形信息。`FontSubsetter` 预处理字体后复用子集加速数据；同一字体的子集提取通过短锁保护，压缩在线程池中并行执行。输入先解码为 SFNT（WOFF/WOFF2）或提取集合中的字体（TTC），再规范化为可复用的 HarfBuzz 预处理字体；保留原有 TrueType/CFF 轮廓，不进行有损曲线转换。没有系统 HarfBuzz/Brotli 安装要求。Vite 插件中，相同子集的文件复制和相同 CSS 的读取共享 Promise，避免并发页面在 Windows 上争用同一输出文件。
 
 算法指纹已更新，因此旧字体缓存不会被当作新输出使用。0.3.x 与 0.4.2 的字体文件名及 WOFF2 字节会不同；同一 0.4.2 版本内的同步、预处理和异步接口仍产生相同结果。HarfBuzz 会正确重建垂直度量表，避免原后端多余的 `vmtx` 数据。新版也会保留双向排版所需的镜像符号闭包，因此实际 cmap 可能包含请求字符以外的对应镜像符号。第三方许可证随 npm 包附带。
+
+## LICENSES 与许可范围
+
+项目自身的 Rust / JavaScript 代码采用 **MIT**，根 [LICENSE](LICENSE) 保持标准正文，便于 GitHub 识别。以下文件记录相应第三方组件的许可，**不表示项目整体改为多重许可**。`OR` 多许可组件保留上游的可选许可；逐组件版本、版权、原始许可与 NOTICE 的完整清单见 [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt)。
+
+| 组件 / Component                         | 许可 / License             | 全文 / Full text                                              |
+| ---------------------------------------- | -------------------------- | ------------------------------------------------------------- |
+| 项目 Rust / JS 代码                      | MIT                        | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
+| HarfBuzz 14.6                            | MIT 风格许可（保留原文）   | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
+| Google WOFF2                             | MIT                        | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
+| Google Brotli 1.2                        | MIT                        | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
+| compu-brotli-sys                         | Boost Software License 1.0 | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
+| allsorts、Unicode 分类/组合/连接类型依赖 | Apache-2.0                 | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
+| alloc-no-stdlib / alloc-stdlib           | BSD-3-Clause               | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
+| libloading                               | ISC                        | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
+| unicode-ident 附带的 Unicode 数据        | Unicode-3.0                | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
+| blake3 等依赖的许可选项                  | CC0-1.0                    | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
+| constant_time_eq 的许可选项              | MIT-0                      | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt)               |
+| tinyvec 的许可选项                       | Zlib                       | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
+| adler2 的许可选项                        | 0BSD                       | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
+
+`LICENSES/` 与完整第三方清单均随 npm 包发布。字体输入、子集和格式转换结果仍遵循原字体许可；本工具的 MIT 不能覆盖字体许可、保留名称或再分发条件。测试字体按各自许可分发，且不进入 npm 包。GitHub 主许可识别与上述组件清单是两项独立信息。
