@@ -118,7 +118,7 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
       )
       const emitted = new Set()
       const cssCache = new Map()
-      for (const page of pages) {
+      const processPage = async (page: string) => {
         const html = await readFile(page, 'utf8')
         const linkedCss = []
         for (const [tag] of html.matchAll(/<link\b[^>]*>/gi)) {
@@ -137,10 +137,10 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           linkedCss.push(cssCache.get(cssPath))
         }
         const text = `${visibleText(html)} ${linkedCss.join(' ')}`
-        if (!text.trim()) continue
+        if (!text.trim()) return
         const rules = []
         for (const font of fontBytes) {
-          const result = font.subsetter.subset(text, cacheDir)
+          const result = await font.subsetter.subsetAsync(text, cacheDir)
           const filename = `${result.hash}.woff2`
           const target = path.join(dir, 'assets', 'cjk-font-split', filename)
           if (!emitted.has(filename)) {
@@ -159,6 +159,9 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           ? html.replace(/<\/head\s*>/i, `${injected}</head>`)
           : `${injected}${html}`
         await writeFile(page, updated)
+      }
+      for (let offset = 0; offset < pages.length; offset += 4) {
+        await Promise.all(pages.slice(offset, offset + 4).map(processPage))
       }
       if (options.verbose) {
         console.info(

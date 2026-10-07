@@ -63,3 +63,5 @@ const prepared = new FontSubsetter(fontBuffer, 0)
 const first = prepared.subset('First page 第一页', cacheDir)
 const second = prepared.subset('Second page 第二页', cacheDir)
 ```
+
+`await prepared.subsetAsync(text, cacheDir)` 可将分片工作交给 Node 线程池。字体数据由任务共享，压缩阶段并行，缓存和清单写入保持原子串行；建议最多同时提交 4 个任务。同步接口保持兼容。

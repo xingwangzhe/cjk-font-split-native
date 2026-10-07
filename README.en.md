@@ -63,3 +63,5 @@ const prepared = new FontSubsetter(fontBuffer, 0)
 const first = prepared.subset('First page 第一页', cacheDir)
 const second = prepared.subset('Second page 第二页', cacheDir)
 ```
+
+`await prepared.subsetAsync(text, cacheDir)` runs subsetting in the Node worker pool. Tasks share the prepared font, compression runs concurrently, and cache/manifest writes remain atomic and serialized. Use at most four concurrent tasks. The synchronous API remains compatible.

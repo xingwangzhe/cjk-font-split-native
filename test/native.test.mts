@@ -158,3 +158,27 @@ test('prepared font preserves native cache keys and cold output across pages', a
     await rm(preparedCache, { recursive: true, force: true })
   }
 })
+
+test('async subsets preserve bytes and atomically share concurrent cache writes', async () => {
+  const cache = await mkdtemp(path.join(os.tmpdir(), 'cjk-async-'))
+  const syncCache = await mkdtemp(path.join(os.tmpdir(), 'cjk-sync-'))
+  try {
+    const prepared = new FontSubsetter(font)
+    const texts = ['Hello 世界', '0123456789', 'English café — © 2026']
+    const results = await Promise.all(texts.map((text) => prepared.subsetAsync(text, cache)))
+    for (let i = 0; i < texts.length; i++) {
+      const expected = prepared.subset(texts[i]!, syncCache)
+      assert.equal(results[i]!.hash, expected.hash)
+      assert.deepEqual(await readFile(results[i]!.path), await readFile(expected.path))
+    }
+    const same = await Promise.all(Array.from({ length: 16 }, () => prepared.subsetAsync('Concurrent cold key', cache)))
+    assert.equal(same.filter((result) => !result.cacheHit).length, 1)
+    assert.equal(new Set(same.map((result) => result.hash)).size, 1)
+    await rm(same[0]!.path)
+    assert.equal((await prepared.subsetAsync('Concurrent cold key', cache)).cacheHit, false)
+    await assert.rejects(prepared.subsetAsync('', cache), /at least one character/)
+  } finally {
+    await rm(cache, { recursive: true, force: true })
+    await rm(syncCache, { recursive: true, force: true })
+  }
+})

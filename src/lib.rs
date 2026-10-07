@@ -1,8 +1,8 @@
 #![deny(clippy::all)]
 
 use flate2::read::ZlibDecoder;
-use napi::bindgen_prelude::Buffer;
-use napi::{Error, Result, Status};
+use napi::bindgen_prelude::{AsyncTask, Buffer};
+use napi::{Env, Error, Result, Status, Task};
 use napi_derive::napi;
 use serde::Serialize;
 use std::borrow::Cow;
@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 const ALGORITHM_VERSION: &str = "fontcull-2;allsorts-cff-1;woff-normalizer-1;woff2-q8";
 const WOFF2_QUALITY: usize = 8;
@@ -51,7 +51,7 @@ pub fn subset_font(
 /// Reuse a validated font and its BLAKE3 prefix across a multi-page build.
 #[napi]
 pub struct FontSubsetter {
-  normalized: Vec<u8>,
+  normalized: Arc<Vec<u8>>,
   prefix: blake3::Hasher,
 }
 
@@ -62,7 +62,20 @@ impl FontSubsetter {
     let face = face_index.unwrap_or(0);
     let prefix = font_hasher(&font, face);
     let normalized = normalize_font(&font, face).map_err(|e| Error::new(Status::InvalidArg, e))?;
-    Ok(Self { normalized, prefix })
+    Ok(Self {
+      normalized: Arc::new(normalized),
+      prefix,
+    })
+  }
+
+  #[napi(ts_return_type = "Promise<SubsetResult>")]
+  pub fn subset_async(&self, text: String, cache_dir: String) -> AsyncTask<SubsetTask> {
+    AsyncTask::new(SubsetTask {
+      normalized: Arc::clone(&self.normalized),
+      prefix: self.prefix.clone(),
+      text,
+      cache_dir,
+    })
   }
 
   #[napi]
@@ -70,6 +83,31 @@ impl FontSubsetter {
     subset_cached(self.prefix.clone(), text, cache_dir, || {
       Ok(Cow::Borrowed(self.normalized.as_slice()))
     })
+  }
+}
+
+pub struct SubsetTask {
+  normalized: Arc<Vec<u8>>,
+  prefix: blake3::Hasher,
+  text: String,
+  cache_dir: String,
+}
+
+impl Task for SubsetTask {
+  type Output = SubsetResult;
+  type JsValue = SubsetResult;
+
+  fn compute(&mut self) -> Result<Self::Output> {
+    subset_cached(
+      self.prefix.clone(),
+      self.text.clone(),
+      self.cache_dir.clone(),
+      || Ok(Cow::Borrowed(self.normalized.as_slice())),
+    )
+  }
+
+  fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+    Ok(output)
   }
 }
 
@@ -105,9 +143,6 @@ fn subset_cached<'a>(
   fs::create_dir_all(&cache).map_err(io_error)?;
   let output = cache.join(format!("{key}.woff2"));
 
-  let _guard = CACHE_LOCK
-    .lock()
-    .map_err(|_| Error::new(Status::GenericFailure, "cache lock poisoned"))?;
   if output.is_file() {
     let bytes = fs::metadata(&output).map_err(io_error)?.len() as u32;
     return Ok(SubsetResult {
@@ -122,6 +157,18 @@ fn subset_cached<'a>(
   let normalized = normalize()?;
   let woff2 =
     subset_to_woff2(&normalized, &chars).map_err(|e| Error::new(Status::GenericFailure, e))?;
+  let _guard = CACHE_LOCK
+    .lock()
+    .map_err(|_| Error::new(Status::GenericFailure, "cache lock poisoned"))?;
+  if output.is_file() {
+    return Ok(SubsetResult {
+      path: output.to_string_lossy().into_owned(),
+      hash: key,
+      cache_hit: true,
+      bytes: fs::metadata(&output).map_err(io_error)?.len() as u32,
+      characters: sorted.len() as u32,
+    });
+  }
   atomic_write(&output, &woff2).map_err(io_error)?;
   update_manifest(&cache, &key, &output, woff2.len(), sorted.len()).map_err(io_error)?;
   Ok(SubsetResult {
