@@ -210,7 +210,11 @@ struct PreparedFont {
   face: Mutex<PreparedFace>,
   _data: Arc<Vec<u8>>,
 }
-struct PreparedFace(hb_subset::PreprocessedFontFace<'static>);
+struct PreparedFace {
+  // Drop the preprocessed handle before its source face and backing bytes.
+  preprocessed: Option<hb_subset::PreprocessedFontFace<'static>>,
+  source: hb_subset::FontFace<'static>,
+}
 
 // HarfBuzz faces are reference-counted and not thread-affine. We only move the
 // handle across workers; the mutex serializes every operation on this face.
@@ -221,27 +225,30 @@ impl PreparedFont {
     let data = Arc::new(data);
     let blob = hb_subset::Blob::from_bytes(&data).map_err(hb_error)?;
     let face = hb_subset::FontFace::new(blob).map_err(hb_error)?;
-    let prepared = face.preprocess_for_subsetting();
-    // `data` is immutable, owns the allocation, and outlives the face above.
-    let prepared = unsafe {
-      std::mem::transmute::<
-        hb_subset::PreprocessedFontFace<'_>,
-        hb_subset::PreprocessedFontFace<'static>,
-      >(prepared)
-    };
-    drop(face);
+    // `data` is immutable, owns the allocation, and outlives both handles.
+    let source =
+      unsafe { std::mem::transmute::<hb_subset::FontFace<'_>, hb_subset::FontFace<'static>>(face) };
     Ok(Self {
-      face: Mutex::new(PreparedFace(prepared)),
+      face: Mutex::new(PreparedFace {
+        preprocessed: None,
+        source,
+      }),
       _data: data,
     })
   }
   fn subset(&self, chars: &HashSet<char>) -> Result<Vec<u8>> {
     let subset = {
-      let prepared = self
+      let mut prepared = self
         .face
         .lock()
         .map_err(|_| Error::new(Status::GenericFailure, "font lock poisoned"))?;
-      subset_sfnt(&prepared.0, chars)?
+      if prepared.preprocessed.is_none() {
+        prepared.preprocessed = Some(prepared.source.preprocess_for_subsetting());
+      }
+      subset_sfnt(
+        prepared.preprocessed.as_ref().expect("initialized above"),
+        chars,
+      )?
     };
     compress_subset(&subset)
   }
@@ -529,6 +536,17 @@ mod tests {
       i16::from_be_bytes([metrics[offset], metrics[offset + 1]]),
     )
   }
+  #[test]
+  fn preprocessing_is_lazy_and_reused_after_first_cold_subset() {
+    let prepared =
+      PreparedFont::new(include_bytes!("../test/fixtures/SyntheticCJK.ttf").to_vec()).unwrap();
+    assert!(prepared.face.lock().unwrap().preprocessed.is_none());
+    let chars = HashSet::from(['中', '文', 'A']);
+    let first = prepared.subset(&chars).unwrap();
+    assert!(prepared.face.lock().unwrap().preprocessed.is_some());
+    assert_eq!(first, prepared.subset(&chars).unwrap());
+  }
+
   #[test]
   fn ttf_and_cff_subsets_preserve_cjk_vertical_metrics_and_ligature_closure() {
     for original in [

@@ -116,6 +116,8 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           subsetter: new FontSubsetter(await readFile(path.resolve(root, font.src)), font.faceIndex ?? 0),
         })),
       )
+      // Share native requests within this build when pages need the same glyphs.
+      const requests = fontBytes.map(() => new Map<string, ReturnType<FontSubsetter['subsetAsync']>>())
       const emitted = new Map<string, Promise<void>>()
       const cssCache = new Map<string, Promise<string>>()
       const processPage = async (page: string) => {
@@ -139,9 +141,15 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
         }
         const text = `${visibleText(html)} ${linkedCss.join(' ')}`
         if (!text.trim()) return
+        const characters = [...new Set(text)].sort((a, b) => a.codePointAt(0)! - b.codePointAt(0)!).join('')
         const rules = []
-        for (const font of fontBytes) {
-          const result = await font.subsetter.subsetAsync(text, cacheDir)
+        for (const [index, font] of fontBytes.entries()) {
+          let request = requests[index].get(characters)
+          if (!request) {
+            request = font.subsetter.subsetAsync(characters, cacheDir)
+            requests[index].set(characters, request)
+          }
+          const result = await request
           const filename = `${result.hash}.woff2`
           const target = path.join(dir, 'assets', 'cjk-font-split', filename)
           let emission = emitted.get(filename)
@@ -165,9 +173,15 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           : `${injected}${html}`
         await writeFile(page, updated)
       }
-      for (let offset = 0; offset < pages.length; offset += 4) {
-        await Promise.all(pages.slice(offset, offset + 4).map(processPage))
-      }
+      let nextPage = 0
+      await Promise.all(
+        Array.from({ length: Math.min(4, pages.length) }, async () => {
+          while (nextPage < pages.length) {
+            const page = pages[nextPage++]
+            await processPage(page)
+          }
+        }),
+      )
       if (options.verbose) {
         console.info(
           `[cjk-font-split-native] processed ${pages.length} HTML pages; emitted ${emitted.size} unique subsets`,

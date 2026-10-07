@@ -147,7 +147,7 @@ jobs:
       - if: matrix.musl
         run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.mts
   performance:
-    name: Compare runtime against published 0.4.9
+    name: Compare runtime against 0.4.9 and previous candidate
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -159,8 +159,22 @@ jobs:
         with:
           name: addon-x86_64-unknown-linux-gnu
           path: candidate
+      - uses: actions/download-artifact@v8
+        with:
+          name: addon-x86_64-unknown-linux-gnu
+          run-id: 37591881431
+          github-token: ${{ github.token }}
+          path: previous-candidate
+      - name: Fetch pinned real CJK font
+        shell: bash
+        run: |
+          mkdir -p benchmark-fonts
+          curl --fail --location --retry 3 https://github.com/lxgw/LxgwWenKai/releases/download/v1.522/LXGWWenKai-Regular.ttf -o benchmark-fonts/LXGWWenKai-Regular.ttf
+          echo '39ad71264b588165b469e35e6afb162a378dacd1f95348160240ba9038ac3009  benchmark-fonts/LXGWWenKai-Regular.ttf' | sha256sum --check
       - name: Fetch published baseline and compare in one runner
         shell: bash
+        env:
+          CJK_BENCH_FONT: ${{ github.workspace }}/benchmark-fonts/LXGWWenKai-Regular.ttf
         run: |
           mkdir -p target/runtime-comparison baseline-package
           npm pack @xingwangzhe/cjk-font-split-native@0.4.9 --ignore-scripts --pack-destination baseline-package
@@ -169,10 +183,17 @@ jobs:
           cp candidate/cjk-font-split-native.linux-x64-gnu.node target/runtime-comparison/optimized.node
           node -e "require('node:fs').writeFileSync('target/runtime-comparison/build.json', JSON.stringify({baseline: 'npm 0.4.9', candidate: process.env.GITHUB_SHA}))"
           node scripts/compare-pgo.mjs target/runtime-comparison
+          mkdir -p target/previous-comparison
+          cp previous-candidate/cjk-font-split-native.linux-x64-gnu.node target/previous-comparison/baseline.node
+          cp candidate/cjk-font-split-native.linux-x64-gnu.node target/previous-comparison/optimized.node
+          node -e "require('node:fs').writeFileSync('target/previous-comparison/build.json', JSON.stringify({baseline: 'e39eff4 / CI 37591881431', candidate: process.env.GITHUB_SHA}))"
+          node scripts/compare-pgo.mjs target/previous-comparison
       - uses: actions/upload-artifact@v7
         with:
           name: runtime-vs-0.4.9
-          path: target/runtime-comparison/*.json
+          path: |
+            target/runtime-comparison/*.json
+            target/previous-comparison/*.json
           if-no-files-found: error
   publish:
     if: startsWith(github.ref, 'refs/tags/v')

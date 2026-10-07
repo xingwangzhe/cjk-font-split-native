@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { performance } from 'node:perf_hooks'
-import { dirname, resolve, join } from 'node:path'
+import { dirname, resolve, join, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const native = createRequire(import.meta.url)(process.env.PGO_BINDING_PATH)
@@ -28,13 +28,34 @@ const { tmpdir } = await import('node:os')
 const cache = mkdtempSync(join(tmpdir(), 'font-pgo-'))
 let index = 0
 try {
-  for (const file of ['DejaVuSans.ttf', 'SyntheticCJK.ttf', 'SyntheticCJK.otf']) {
+  const files = ['DejaVuSans.ttf', 'SyntheticCJK.ttf', 'SyntheticCJK.otf'].map((file) =>
+    join(root, 'test', 'fixtures', file),
+  )
+  if (process.env.CJK_BENCH_FONT) files.push(resolve(process.env.CJK_BENCH_FONT))
+  for (const filePath of files) {
+    const file = basename(filePath)
     if (training) console.error(`PGO training font: ${file}`)
-    const bytes = readFileSync(join(root, 'test', 'fixtures', file))
+    const bytes = readFileSync(filePath)
     const font = new native.FontSubsetter(bytes)
-    const text = training ? 'Hello café — 中文字体 AV fi 1234' : 'The quick brown fox — 中文字形 AV fi 6789'
+    const text =
+      (training ? 'Hello café — 中文字体 AV fi 1234' : 'The quick brown fox — 中文字形 AV fi 6789') +
+      (bytes.length > 1_000_000 ? Array.from({ length: 600 }, (_, i) => String.fromCodePoint(0x4e00 + i)).join('') : '')
     const warmCache = join(cache, `${file}-warm`)
     font.subset(text, warmCache)
+    await measure(
+      `${file}.constructWarm`,
+      () => {
+        sink += new native.FontSubsetter(bytes).subset(text, warmCache).bytes
+      },
+      5,
+    )
+    await measure(
+      `${file}.constructCold`,
+      () => {
+        sink += new native.FontSubsetter(bytes).subset(text, join(cache, String(index++))).bytes
+      },
+      3,
+    )
     await measure(
       `${file}.preparedCold`,
       () => {
