@@ -80,9 +80,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.target }}" == *-linux-gnu ]]; then
-            bun run build:pgo --select --target "${{ matrix.target }}" --zig-glibc 2.28
+            bun run build:pgo --select --require-pgo --target "${{ matrix.target }}" --zig-glibc 2.28
           else
-            bun run build:pgo --select --target ${{ matrix.target }} ${{ matrix.args }}
+            bun run build:pgo --select --require-pgo --target ${{ matrix.target }} ${{ matrix.args }}
           fi
       - uses: actions/upload-artifact@v7
         with:

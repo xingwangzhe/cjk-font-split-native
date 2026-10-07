@@ -23,6 +23,8 @@ const target = take('--target') ?? host
 const glibc = take('--zig-glibc')
 const select = args.includes('--select')
 if (select) args.splice(args.indexOf('--select'), 1)
+const requirePgo = args.includes('--require-pgo')
+if (requirePgo) args.splice(args.indexOf('--require-pgo'), 1)
 const compare = select || args.includes('--compare')
 if (args.includes('--compare')) args.splice(args.indexOf('--compare'), 1)
 if (!target || !pkg.napi.targets.includes(target)) throw new Error(`Unsupported release target: ${target}`)
@@ -74,11 +76,23 @@ const zigEnv =
         CARGO_ZIGBUILD_ZIG_PATH: join(root, 'scripts', 'zig-pgo.py'),
       }
     : {}
+// cc inherits Rust PGO flags into C/C++ compilation by default. Those
+// compilers need not share rustc's LLVM profiling ABI. Override their PGO
+// flags last while preserving the sysroot and all existing compiler flags.
+const nativeEnv = target.endsWith('-msvc')
+  ? {}
+  : Object.fromEntries(
+      ['CFLAGS', 'CXXFLAGS'].map((name) => {
+        const key = `${name}_${target.replaceAll('-', '_')}`
+        return [key, `${process.env[key] ?? ''} -fno-profile-generate -fno-profile-instr-generate -fno-profile-use`]
+      }),
+    )
 const stages = []
 const build = (stage, flag) => {
   console.info(`PGO ${stage}: ${target}`)
   const env = {
     ...zigEnv,
+    ...nativeEnv,
     CARGO_INCREMENTAL: '0',
     CARGO_TARGET_DIR: join(root, 'target', 'pgo-build'),
     CARGO_ENCODED_RUSTFLAGS: [
@@ -156,6 +170,7 @@ try {
         target,
         rustc: capture('rustc', ['-vV']),
         profileCount: profiles.length,
+        nativeProfiling: 'disabled: C/C++ compiler LLVM ABI may differ from rustc',
         profileSha256: profileHash,
         stages,
       },
@@ -164,7 +179,7 @@ try {
     ) + '\n',
   )
 } catch (error) {
-  if (!select) throw error
+  if (!select || requirePgo) throw error
   copyFileSync(join(output, 'baseline.node'), binary)
   const record = {
     package: pkg.name,
