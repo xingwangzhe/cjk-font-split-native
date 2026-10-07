@@ -29,6 +29,7 @@ const cache = mkdtempSync(join(tmpdir(), 'font-pgo-'))
 let index = 0
 try {
   for (const file of ['DejaVuSans.ttf', 'SyntheticCJK.ttf', 'SyntheticCJK.otf']) {
+    if (training) console.error(`PGO training font: ${file}`)
     const bytes = readFileSync(join(root, 'test', 'fixtures', file))
     const font = new native.FontSubsetter(bytes)
     const text = training ? 'Hello café — 中文字体 AV fi 1234' : 'The quick brown fox — 中文字形 AV fi 6789'

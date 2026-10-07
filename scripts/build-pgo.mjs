@@ -62,7 +62,8 @@ if (originalFlags.some((arg) => /profile-(generate|use)/.test(arg)))
   throw new Error('Use build:pgo without external PGO flags')
 const run = (command, values, env = {}) => {
   const result = spawnSync(command, values, { cwd: root, stdio: 'inherit', env: { ...process.env, ...env } })
-  if (result.error || result.status !== 0) throw result.error ?? new Error(`${command} exited with ${result.status}`)
+  if (result.error || result.status !== 0)
+    throw result.error ?? new Error(`${command} exited with ${result.status} (signal ${result.signal ?? 'none'})`)
 }
 // Zig's driver rejects rustc's raw `-u SYMBOL` PGO runtime argument.
 // Keep the selected Zig sysroot while translating that pair to -Wl,-u,SYMBOL.
@@ -105,62 +106,84 @@ const build = (stage, flag) => {
   stages.push({ stage, seconds: (Date.now() - started) / 1000 })
 }
 if (compare) build('baseline')
-build('instrumented', `-Cprofile-generate=${raw}`)
-const profilePattern = join(raw, '%m-%p.profraw')
-if (musl) {
-  run('docker', [
-    'run',
-    '--rm',
-    '-v',
-    `${root}:/work`,
-    '-w',
-    '/work',
-    '-e',
-    `LLVM_PROFILE_FILE=/work/target/pgo/${target}/raw/%m-%p.profraw`,
-    '-e',
-    `PGO_BINDING_PATH=/work/${pkg.napi.binaryName}.${labels[target]}.node`,
-    '-e',
-    'RAYON_NUM_THREADS=4',
-    'node:24-alpine',
-    'node',
-    'scripts/pgo-workload.mjs',
-    'train',
-  ])
-} else {
-  run(process.execPath, ['scripts/pgo-workload.mjs', 'train'], {
-    LLVM_PROFILE_FILE: profilePattern,
-    PGO_BINDING_PATH: binary,
-    RAYON_NUM_THREADS: '4',
-  })
+try {
+  build('instrumented', `-Cprofile-generate=${raw}`)
+  const profilePattern = join(raw, '%m-%p.profraw')
+  if (musl) {
+    run('docker', [
+      'run',
+      '--rm',
+      '-v',
+      `${root}:/work`,
+      '-w',
+      '/work',
+      '-e',
+      `LLVM_PROFILE_FILE=/work/target/pgo/${target}/raw/%m-%p.profraw`,
+      '-e',
+      `PGO_BINDING_PATH=/work/${pkg.napi.binaryName}.${labels[target]}.node`,
+      '-e',
+      'RAYON_NUM_THREADS=4',
+      'node:24-alpine',
+      'node',
+      'scripts/pgo-workload.mjs',
+      'train',
+    ])
+  } else {
+    run(process.execPath, ['scripts/pgo-workload.mjs', 'train'], {
+      LLVM_PROFILE_FILE: profilePattern,
+      PGO_BINDING_PATH: binary,
+      RAYON_NUM_THREADS: '4',
+    })
+  }
+  const profiles = readdirSync(raw)
+    .filter((name) => name.endsWith('.profraw'))
+    .map((name) => join(raw, name))
+  if (!profiles.length)
+    throw new Error('Training did not produce any raw profiles; refusing to publish an untrained build')
+  run(profdata, ['merge', '-o', profile, ...profiles])
+  // A content-addressed profile path prevents Cargo from reusing code built
+  // with an older profile: Cargo does not track profile file contents itself.
+  const profileHash = createHash('sha256').update(readFileSync(profile)).digest('hex')
+  const versionedProfile = join(output, `merged-${profileHash}.profdata`)
+  copyFileSync(profile, versionedProfile)
+  build('optimized', `-Cprofile-use=${versionedProfile}`)
+  writeFileSync(
+    join(output, 'build.json'),
+    JSON.stringify(
+      {
+        package: pkg.name,
+        version: pkg.version,
+        target,
+        rustc: capture('rustc', ['-vV']),
+        profileCount: profiles.length,
+        profileSha256: profileHash,
+        stages,
+      },
+      null,
+      2,
+    ) + '\n',
+  )
+} catch (error) {
+  if (!select) throw error
+  copyFileSync(join(output, 'baseline.node'), binary)
+  const record = {
+    package: pkg.name,
+    version: pkg.version,
+    target,
+    rustc: capture('rustc', ['-vV']),
+    stages,
+    selected: 'baseline',
+    profileCount: 0,
+    pgoUnavailable: String(error),
+  }
+  writeFileSync(join(output, 'build.json'), JSON.stringify(record, null, 2) + '\n')
+  writeFileSync(
+    join(output, 'benchmark.json'),
+    JSON.stringify({ results: [], geometricMeanSpeedup: null, pgoUnavailable: String(error) }, null, 2) + '\n',
+  )
+  console.info(`PGO unavailable; selected the unprofiled release: ${error}`)
+  process.exit(0)
 }
-const profiles = readdirSync(raw)
-  .filter((name) => name.endsWith('.profraw'))
-  .map((name) => join(raw, name))
-if (!profiles.length)
-  throw new Error('Training did not produce any raw profiles; refusing to publish an untrained build')
-run(profdata, ['merge', '-o', profile, ...profiles])
-// A content-addressed profile path prevents Cargo from reusing code built
-// with an older profile: Cargo does not track profile file contents itself.
-const profileHash = createHash('sha256').update(readFileSync(profile)).digest('hex')
-const versionedProfile = join(output, `merged-${profileHash}.profdata`)
-copyFileSync(profile, versionedProfile)
-build('optimized', `-Cprofile-use=${versionedProfile}`)
-writeFileSync(
-  join(output, 'build.json'),
-  JSON.stringify(
-    {
-      package: pkg.name,
-      version: pkg.version,
-      target,
-      rustc: capture('rustc', ['-vV']),
-      profileCount: profiles.length,
-      profileSha256: profileHash,
-      stages,
-    },
-    null,
-    2,
-  ) + '\n',
-)
 console.info(`PGO release ready: ${binary}`)
 if (compare) {
   if (musl) {
