@@ -70,7 +70,11 @@ const build = (stage, flag) => {
   const env = {
     CARGO_INCREMENTAL: '0',
     CARGO_TARGET_DIR: join(root, 'target', 'pgo-build'),
-    CARGO_ENCODED_RUSTFLAGS: [...originalFlags, ...(flag ? [flag] : [])].join('\x1f'),
+    CARGO_ENCODED_RUSTFLAGS: [
+      ...originalFlags,
+      ...(musl ? ['-Ctarget-feature=-crt-static'] : []),
+      ...(flag ? [flag] : []),
+    ].join('\x1f'),
     RUSTFLAGS: '',
   }
   const started = Date.now()
