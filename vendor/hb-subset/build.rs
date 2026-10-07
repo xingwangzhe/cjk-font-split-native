@@ -1,5 +1,9 @@
 fn main() {
-  cc::Build::new()
+  let mut build = cc::Build::new();
+  if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+    build.flag("/bigobj");
+  }
+  build
     .cpp(true)
     .std("c++17")
     .warnings(false)
