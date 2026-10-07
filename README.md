@@ -76,20 +76,21 @@ const second = prepared.subset('Second page 第二页', cacheDir)
 
 项目自身的 Rust / JavaScript 代码采用 **MIT**，根 [LICENSE](LICENSE) 保持标准正文，便于 GitHub 识别。以下文件记录相应第三方组件的许可，**不表示项目整体改为多重许可**。`OR` 多许可组件保留上游的可选许可；逐组件版本、版权、原始许可与 NOTICE 的完整清单见 [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt)。
 
-| 组件 / Component                         | 许可 / License             | 全文 / Full text                                              |
-| ---------------------------------------- | -------------------------- | ------------------------------------------------------------- |
-| 项目 Rust / JS 代码                      | MIT                        | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
-| HarfBuzz 14.6                            | MIT 风格许可（保留原文）   | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
-| Google WOFF2                             | MIT                        | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
-| Google Brotli 1.2                        | MIT                        | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
-| compu-brotli-sys                         | Boost Software License 1.0 | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
-| allsorts、Unicode 分类/组合/连接类型依赖 | Apache-2.0                 | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
-| alloc-no-stdlib / alloc-stdlib           | BSD-3-Clause               | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
-| libloading                               | ISC                        | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
-| unicode-ident 附带的 Unicode 数据        | Unicode-3.0                | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
-| blake3 等依赖的许可选项                  | CC0-1.0                    | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
-| constant_time_eq 的许可选项              | MIT-0                      | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt)               |
-| tinyvec 的许可选项                       | Zlib                       | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
-| adler2 的许可选项                        | 0BSD                       | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
+| 组件 / Component                         | 许可 / License                                  | 全文 / Full text                                              |
+| ---------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------- |
+| 项目 Rust / JS 代码                      | MIT                                             | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
+| HarfBuzz 14.6                            | MIT 风格许可（保留原文）                        | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
+| Google WOFF2                             | MIT                                             | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
+| Google Brotli 1.2                        | MIT                                             | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
+| compu-brotli-sys                         | Boost Software License 1.0                      | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
+| allsorts、Unicode 分类/组合/连接类型依赖 | Apache-2.0                                      | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
+| alloc-no-stdlib / alloc-stdlib           | BSD-3-Clause                                    | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
+| libloading                               | ISC                                             | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
+| unicode-ident 附带的 Unicode 数据        | Unicode-3.0                                     | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
+| blake3 等依赖的许可选项                  | CC0-1.0                                         | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
+| constant_time_eq 的许可选项              | Embedded LLVM runtime (Zig Linux builds)        | Apache-2.0 WITH LLVM-exception; legacy notices retained       | [LICENSE-LLVM-RUNTIME.txt](LICENSES/LICENSE-LLVM-RUNTIME.txt) |
+| MIT-0                                    | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt) |
+| tinyvec 的许可选项                       | Zlib                                            | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
+| adler2 的许可选项                        | 0BSD                                            | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
 
 `LICENSES/` 与完整第三方清单均随 npm 包发布。字体输入、子集和格式转换结果仍遵循原字体许可；本工具的 MIT 不能覆盖字体许可、保留名称或再分发条件。测试字体按各自许可分发，且不进入 npm 包。GitHub 主许可识别与上述组件清单是两项独立信息。

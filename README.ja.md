@@ -56,20 +56,21 @@ JS の依存関係とスクリプトには Bun、Vite プラグインの型と�
 
 本プロジェクトの Rust / JavaScript コードは **MIT** です。GitHub の識別用に、ルートの [LICENSE](LICENSE) は標準本文を保持します。以下のライセンスは各サードパーティのコンポーネントに適用され、プロジェクト全体の追加ライセンスではありません。`OR` は上流の選択肢です。バージョン、著作権、元のライセンスと NOTICE は [THIRD_PARTY_LICENSES.txt](THIRD_PARTY_LICENSES.txt) に収録されています。
 
-| 组件 / Component                                       | 许可 / License                     | 全文 / Full text                                              |
-| ------------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------- |
-| Project Rust / JS code                                 | MIT                                | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
-| HarfBuzz 14.6                                          | MIT-style (original text retained) | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
-| Google WOFF2                                           | MIT                                | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
-| Google Brotli 1.2                                      | MIT                                | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
-| compu-brotli-sys                                       | Boost Software License 1.0         | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
-| allsorts and Unicode category/combining/joining crates | Apache-2.0                         | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
-| alloc-no-stdlib / alloc-stdlib                         | BSD-3-Clause                       | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
-| libloading                                             | ISC                                | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
-| Unicode data in unicode-ident                          | Unicode-3.0                        | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
-| License option for blake3 and related crates           | CC0-1.0                            | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
-| License option for constant_time_eq                    | MIT-0                              | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt)               |
-| License option for tinyvec                             | Zlib                               | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
-| License option for adler2                              | 0BSD                               | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
+| 组件 / Component                                       | 许可 / License                                  | 全文 / Full text                                              |
+| ------------------------------------------------------ | ----------------------------------------------- | ------------------------------------------------------------- |
+| Project Rust / JS code                                 | MIT                                             | [LICENSE-MIT.txt](LICENSES/LICENSE-MIT.txt)                   |
+| HarfBuzz 14.6                                          | MIT-style (original text retained)              | [LICENSE-HARFBUZZ.txt](LICENSES/LICENSE-HARFBUZZ.txt)         |
+| Google WOFF2                                           | MIT                                             | [LICENSE-WOFF2.txt](LICENSES/LICENSE-WOFF2.txt)               |
+| Google Brotli 1.2                                      | MIT                                             | [LICENSE-BROTLI.txt](LICENSES/LICENSE-BROTLI.txt)             |
+| compu-brotli-sys                                       | Boost Software License 1.0                      | [LICENSE-BOOST-1.0.txt](LICENSES/LICENSE-BOOST-1.0.txt)       |
+| allsorts and Unicode category/combining/joining crates | Apache-2.0                                      | [LICENSE-APACHE-2.0.txt](LICENSES/LICENSE-APACHE-2.0.txt)     |
+| alloc-no-stdlib / alloc-stdlib                         | BSD-3-Clause                                    | [LICENSE-BSD-3-Clause.txt](LICENSES/LICENSE-BSD-3-Clause.txt) |
+| libloading                                             | ISC                                             | [LICENSE-ISC.txt](LICENSES/LICENSE-ISC.txt)                   |
+| Unicode data in unicode-ident                          | Unicode-3.0                                     | [LICENSE-UNICODE-3.0.txt](LICENSES/LICENSE-UNICODE-3.0.txt)   |
+| License option for blake3 and related crates           | CC0-1.0                                         | [LICENSE-CC0-1.0.txt](LICENSES/LICENSE-CC0-1.0.txt)           |
+| License option for constant_time_eq                    | Embedded LLVM runtime (Zig Linux builds)        | Apache-2.0 WITH LLVM-exception; legacy notices retained       | [LICENSE-LLVM-RUNTIME.txt](LICENSES/LICENSE-LLVM-RUNTIME.txt) |
+| MIT-0                                                  | [LICENSE-MIT-0.txt](LICENSES/LICENSE-MIT-0.txt) |
+| License option for tinyvec                             | Zlib                                            | [LICENSE-ZLIB.txt](LICENSES/LICENSE-ZLIB.txt)                 |
+| License option for adler2                              | 0BSD                                            | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
 
 The npm package ships `LICENSES/` and the complete third-party notice file. Input fonts and generated subsets retain their font-specific licenses, reserved names and redistribution conditions; this tool’s MIT does not replace them. Test fonts retain their own licenses and are excluded from npm. GitHub’s primary-license display is separate from this component inventory.
