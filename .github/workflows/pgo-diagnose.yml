@@ -7,20 +7,22 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: latest
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      - uses: mlugg/setup-zig@v2
+      - uses: jdx/mise-action@v5.1.1
         with:
-          version: 0.15.2
-      - uses: taiki-e/install-action@v2
+          mise_toml: |
+            [tools]
+            zig = "0.17.0"
+      - uses: taiki-e/install-action@v2.87.26
         with:
           tool: cargo-zigbuild
       - run: bun install --frozen-lockfile
@@ -44,7 +46,7 @@ jobs:
           nm -D target/pgo/x86_64-unknown-linux-gnu/instrumented.node > target/pgo-diagnose/addon-symbols.txt
           nm -D "$(command -v node)" > target/pgo-diagnose/node-symbols.txt
           readelf -SW target/pgo/x86_64-unknown-linux-gnu/instrumented.node > target/pgo-diagnose/sections.txt
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v7.0.1
         if: always()
         with:
           name: pgo-diagnose
