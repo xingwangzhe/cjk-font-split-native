@@ -75,7 +75,23 @@ jobs:
         if: contains(matrix.target, 'musl')
         with:
           tool: cargo-zigbuild
-      - run: bun run build --target ${{ matrix.target }} ${{ matrix.args }}
+      - name: Build with matching C and C++ sysroot
+        shell: bash
+        run: |
+          if [[ "${{ matrix.target }}" == *-linux-gnu ]]; then
+            export CC="${{ matrix.target }}-gcc"
+            export CXX="${{ matrix.target }}-g++"
+            export AR="${{ matrix.target }}-ar"
+          fi
+          bun run build --target ${{ matrix.target }} ${{ matrix.args }}
+      - name: Reject accidental host glibc C23 imports
+        if: contains(matrix.target, 'linux-gnu')
+        shell: bash
+        run: |
+          if objdump -T cjk-font-split-native.*.node | grep -q '__isoc23_'; then
+            echo 'Native addon imported host glibc C23 functions instead of the release sysroot'
+            exit 1
+          fi
       - uses: actions/upload-artifact@v7
         with:
           name: addon-${{ matrix.target }}
@@ -118,6 +134,9 @@ jobs:
           path: .
       - if: ${{ !matrix.musl }}
         run: bun run test
+      - name: Test GNU addon on older glibc and Node 22
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: docker run --rm -v "$PWD:/work" -w /work node:22-bullseye node --experimental-strip-types --test test/native.test.mts
       - if: matrix.musl
         run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.mts
   publish:
