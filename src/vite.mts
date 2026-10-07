@@ -116,8 +116,8 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           subsetter: new FontSubsetter(await readFile(path.resolve(root, font.src)), font.faceIndex ?? 0),
         })),
       )
-      const emitted = new Set()
-      const cssCache = new Map()
+      const emitted = new Map<string, Promise<void>>()
+      const cssCache = new Map<string, Promise<string>>()
       const processPage = async (page: string) => {
         const html = await readFile(page, 'utf8')
         const linkedCss = []
@@ -128,13 +128,14 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           const cssPath = path.resolve(href.startsWith('/') ? dir : path.dirname(page), href.replace(/^\/+/, ''))
           if (!cssPath.startsWith(`${dir}${path.sep}`)) continue
           if (!cssCache.has(cssPath)) {
-            try {
-              cssCache.set(cssPath, cssContent(await readFile(cssPath, 'utf8')))
-            } catch {
-              cssCache.set(cssPath, '')
-            }
+            cssCache.set(
+              cssPath,
+              readFile(cssPath, 'utf8')
+                .then(cssContent)
+                .catch(() => ''),
+            )
           }
-          linkedCss.push(cssCache.get(cssPath))
+          linkedCss.push(await cssCache.get(cssPath))
         }
         const text = `${visibleText(html)} ${linkedCss.join(' ')}`
         if (!text.trim()) return
@@ -143,11 +144,15 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
           const result = await font.subsetter.subsetAsync(text, cacheDir)
           const filename = `${result.hash}.woff2`
           const target = path.join(dir, 'assets', 'cjk-font-split', filename)
-          if (!emitted.has(filename)) {
-            await mkdir(path.dirname(target), { recursive: true })
-            await copyFile(result.path, target)
-            emitted.add(filename)
+          let emission = emitted.get(filename)
+          if (!emission) {
+            emission = (async () => {
+              await mkdir(path.dirname(target), { recursive: true })
+              await copyFile(result.path, target)
+            })()
+            emitted.set(filename, emission)
           }
+          await emission
           const relative = path.relative(path.dirname(page), target).split(path.sep).join('/')
           const url = relative.startsWith('.') ? relative : `./${relative}`
           rules.push(
