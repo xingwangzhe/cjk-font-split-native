@@ -5,15 +5,17 @@ use napi::bindgen_prelude::{AsyncTask, Buffer};
 use napi::{Env, Error, Result, Status, Task};
 use napi_derive::napi;
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{hash_map::DefaultHasher, HashSet};
 use std::fs::{self, OpenOptions};
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex};
 
 const ALGORITHM_VERSION: &str = "harfbuzz-14.6;woff-normalizer-1;google-brotli-1.2-woff2-q8";
 const WOFF2_QUALITY: usize = 8;
-static CACHE_LOCK: Mutex<()> = Mutex::new(());
+static CACHE_LOCKS: LazyLock<[Mutex<()>; 256]> =
+  LazyLock::new(|| std::array::from_fn(|_| Mutex::new(())));
 // Bound synchronization memory while coalescing identical cold requests.
 static SUBSET_LOCKS: LazyLock<[Mutex<()>; 256]> =
   LazyLock::new(|| std::array::from_fn(|_| Mutex::new(())));
@@ -158,7 +160,13 @@ fn subset_cached(
     });
   }
 
-  let _subset_guard = SUBSET_LOCKS[digest.as_bytes()[0] as usize]
+  let mut cache_hasher = DefaultHasher::new();
+  cache.hash(&mut cache_hasher);
+  let cache_shard = cache_hasher.finish() as u8;
+  // Include the destination: independent cache directories should not block
+  // one another merely because their requested glyph sets are identical.
+  let subset_shard = cache_shard ^ digest.as_bytes()[0];
+  let _subset_guard = SUBSET_LOCKS[subset_shard as usize]
     .lock()
     .map_err(|_| Error::new(Status::GenericFailure, "subset lock poisoned"))?;
   // Another worker may have completed this exact subset while we waited.
@@ -173,7 +181,7 @@ fn subset_cached(
   }
   fs::create_dir_all(&cache).map_err(io_error)?;
   let woff2 = render(&chars)?;
-  let _guard = CACHE_LOCK
+  let _guard = CACHE_LOCKS[cache_shard as usize]
     .lock()
     .map_err(|_| Error::new(Status::GenericFailure, "cache lock poisoned"))?;
   if output.is_file() {
