@@ -64,10 +64,20 @@ const run = (command, values, env = {}) => {
   const result = spawnSync(command, values, { cwd: root, stdio: 'inherit', env: { ...process.env, ...env } })
   if (result.error || result.status !== 0) throw result.error ?? new Error(`${command} exited with ${result.status}`)
 }
+// Zig's driver rejects rustc's raw `-u SYMBOL` PGO runtime argument.
+// Keep the selected Zig sysroot while translating that pair to -Wl,-u,SYMBOL.
+const zigEnv =
+  glibc || musl
+    ? {
+        PGO_REAL_ZIG: capture('sh', ['-c', 'command -v zig']),
+        CARGO_ZIGBUILD_ZIG_PATH: join(root, 'scripts', 'zig-pgo.py'),
+      }
+    : {}
 const stages = []
 const build = (stage, flag) => {
   console.info(`PGO ${stage}: ${target}`)
   const env = {
+    ...zigEnv,
     CARGO_INCREMENTAL: '0',
     CARGO_TARGET_DIR: join(root, 'target', 'pgo-build'),
     CARGO_ENCODED_RUSTFLAGS: [
