@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { performance } from 'node:perf_hooks'
 import subsetWasm from 'subset-font'
 import { build } from 'vite'
-import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
+import { FontSubsetter, subsetFont } from '@xingwangzhe/cjk-font-split-native'
 import { cjkFontSplit } from '@xingwangzhe/cjk-font-split-native/vite'
 const root = path.dirname(fileURLToPath(import.meta.url))
 const fontPath = process.env.CJK_BENCH_FONT ?? path.join(root, '../test/fixtures/DejaVuSans.ttf')
@@ -28,6 +28,10 @@ const measure = async (fn: (index: number) => number | Promise<number>, times = 
 }
 
 try {
+  const prepareStarted = performance.now()
+  const prepared = new FontSubsetter(font, fontFaceIndex)
+  const prepareMs = performance.now() - prepareStarted
+  const preparedWarm = await measure(() => prepared.subset(corpus, path.join(cache, 'prepared')).bytes)
   const nativeCold = await measure((i) => {
     const result = subsetFont(
       font,
@@ -89,6 +93,7 @@ try {
         fontFaceIndex,
         codepoints: [...corpus].length,
         repetitions: 3,
+        prepared: { prepareMs: Number(prepareMs.toFixed(2)), warm: preparedWarm },
         nativeCold,
         nativeWarm,
         crossPageSameSubset: { medianMs: samePageCache.medianMs, cacheHitRate: `${cacheHits}/3 after warm-up` },

@@ -51,3 +51,15 @@ console.log(result) // { path, hash, cacheHit, bytes, characters }
 运行 `bun run benchmark` 可对比冷缓存原生分片、热缓存命中、跨页面重复分片、不同字符集以及 `subset-font` WASM。基准执行三次并报告中位耗时和输出体积；结果会受硬件影响，仅供参考。
 
 测试字体 DejaVu Sans 位于 `test/fixtures/`，遵循上游许可，且不会被打包进 npm 发布内容。
+
+## 复用字体输入
+
+多页面构建可以使用 `FontSubsetter`：字体归一化和完整字体哈希仅在构造时执行一次，后续调用复用已准备的字体。旧 `subsetFont()` 接口保持兼容，两种接口生成相同的缓存键和 WOFF2 字节。实例拥有字体数据的副本；修改原始 Buffer 不会改变实例。
+
+```ts
+import { FontSubsetter } from '@xingwangzhe/cjk-font-split-native'
+
+const prepared = new FontSubsetter(fontBuffer, 0)
+const first = prepared.subset('First page 第一页', cacheDir)
+const second = prepared.subset('Second page 第二页', cacheDir)
+```

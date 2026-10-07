@@ -2,7 +2,7 @@ import { readFile, readdir, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parse, type DefaultTreeAdapterMap } from 'parse5'
 import type { Plugin } from 'vite'
-import { subsetFont } from '../index.mjs'
+import { FontSubsetter } from '../index.mjs'
 
 export interface CjkFont {
   src: string
@@ -113,7 +113,7 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
       const fontBytes = await Promise.all(
         options.fonts.map(async (font) => ({
           ...font,
-          bytes: await readFile(path.resolve(root, font.src)),
+          subsetter: new FontSubsetter(await readFile(path.resolve(root, font.src)), font.faceIndex ?? 0),
         })),
       )
       const emitted = new Set()
@@ -140,7 +140,7 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
         if (!text.trim()) continue
         const rules = []
         for (const font of fontBytes) {
-          const result = subsetFont(font.bytes, text, cacheDir, font.faceIndex ?? 0)
+          const result = font.subsetter.subset(text, cacheDir)
           const filename = `${result.hash}.woff2`
           const target = path.join(dir, 'assets', 'cjk-font-split', filename)
           if (!emitted.has(filename)) {

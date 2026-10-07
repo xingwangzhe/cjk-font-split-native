@@ -51,3 +51,15 @@ For a full local release, download all six CI artifacts with `gh run download <r
 Run `bun run benchmark` to compare cold native subsets, warm cache hits, repeated subsets across pages, unique character sets, and `subset-font` WASM. It reports medians from three runs and output sizes; results depend on the hardware and are informational.
 
 The DejaVu Sans test font lives in `test/fixtures/` under its upstream license and is excluded from the npm package.
+
+## Reuse a font across pages
+
+Use `FontSubsetter` for multi-page builds. Font normalization and hashing happen once in the constructor. Each subset reuses the prepared font. The existing `subsetFont()` API stays compatible; both APIs produce identical cache keys and WOFF2 bytes. The instance owns its font data, so later changes to the original Buffer do not affect it.
+
+```ts
+import { FontSubsetter } from '@xingwangzhe/cjk-font-split-native'
+
+const prepared = new FontSubsetter(fontBuffer, 0)
+const first = prepared.subset('First page 第一页', cacheDir)
+const second = prepared.subset('Second page 第二页', cacheDir)
+```

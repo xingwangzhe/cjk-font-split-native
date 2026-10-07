@@ -9,6 +9,12 @@
  */
 export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
 
+/** Reuse a validated font and its BLAKE3 prefix across a multi-page build. */
+export declare class FontSubsetter {
+  constructor(font: Buffer, faceIndex?: number | undefined | null)
+  subset(text: string, cacheDir: string): SubsetResult
+}
+
 export declare function subsetFont(font: Buffer, text: string, cacheDir: string, faceIndex?: number | undefined | null): SubsetResult
 
 export interface SubsetResult {

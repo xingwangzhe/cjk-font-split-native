@@ -5,6 +5,7 @@ use napi::bindgen_prelude::Buffer;
 use napi::{Error, Result, Status};
 use napi_derive::napi;
 use serde::Serialize;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs::{self, OpenOptions};
 use std::io::{Read, Write};
@@ -39,6 +40,54 @@ pub fn subset_font(
   cache_dir: String,
   face_index: Option<u32>,
 ) -> Result<SubsetResult> {
+  let face = face_index.unwrap_or(0);
+  subset_cached(font_hasher(&font, face), text, cache_dir, || {
+    normalize_font(&font, face)
+      .map(Cow::Owned)
+      .map_err(|e| Error::new(Status::InvalidArg, e))
+  })
+}
+
+/// Reuse a validated font and its BLAKE3 prefix across a multi-page build.
+#[napi]
+pub struct FontSubsetter {
+  normalized: Vec<u8>,
+  prefix: blake3::Hasher,
+}
+
+#[napi]
+impl FontSubsetter {
+  #[napi(constructor)]
+  pub fn new(font: Buffer, face_index: Option<u32>) -> Result<Self> {
+    let face = face_index.unwrap_or(0);
+    let prefix = font_hasher(&font, face);
+    let normalized = normalize_font(&font, face).map_err(|e| Error::new(Status::InvalidArg, e))?;
+    Ok(Self { normalized, prefix })
+  }
+
+  #[napi]
+  pub fn subset(&self, text: String, cache_dir: String) -> Result<SubsetResult> {
+    subset_cached(self.prefix.clone(), text, cache_dir, || {
+      Ok(Cow::Borrowed(self.normalized.as_slice()))
+    })
+  }
+}
+
+fn font_hasher(font: &[u8], face: u32) -> blake3::Hasher {
+  let mut hasher = blake3::Hasher::new();
+  hasher.update(ALGORITHM_VERSION.as_bytes());
+  hasher.update(&face.to_le_bytes());
+  hasher.update(&(font.len() as u64).to_le_bytes());
+  hasher.update(font);
+  hasher
+}
+
+fn subset_cached<'a>(
+  mut hasher: blake3::Hasher,
+  text: String,
+  cache_dir: String,
+  normalize: impl FnOnce() -> Result<Cow<'a, [u8]>>,
+) -> Result<SubsetResult> {
   let chars: HashSet<char> = text.chars().collect();
   if chars.is_empty() {
     return Err(Error::new(
@@ -46,15 +95,8 @@ pub fn subset_font(
       "text must contain at least one character",
     ));
   }
-  let face = face_index.unwrap_or(0);
   let mut sorted: Vec<char> = chars.iter().copied().collect();
   sorted.sort_unstable();
-
-  let mut hasher = blake3::Hasher::new();
-  hasher.update(ALGORITHM_VERSION.as_bytes());
-  hasher.update(&face.to_le_bytes());
-  hasher.update(&(font.len() as u64).to_le_bytes());
-  hasher.update(&font);
   for ch in &sorted {
     hasher.update(&(*ch as u32).to_le_bytes());
   }
@@ -77,7 +119,7 @@ pub fn subset_font(
     });
   }
 
-  let normalized = normalize_font(&font, face).map_err(|e| Error::new(Status::InvalidArg, e))?;
+  let normalized = normalize()?;
   let woff2 =
     subset_to_woff2(&normalized, &chars).map_err(|e| Error::new(Status::GenericFailure, e))?;
   atomic_write(&output, &woff2).map_err(io_error)?;

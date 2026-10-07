@@ -5,7 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { deflateSync } from 'node:zlib'
-import { subsetFont } from '@xingwangzhe/cjk-font-split-native'
+import { FontSubsetter, subsetFont } from '@xingwangzhe/cjk-font-split-native'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const font = await readFile(path.join(here, 'fixtures/DejaVuSans.ttf'))
@@ -125,5 +125,36 @@ test('subsets a selected TTC face', { skip: !ttcPath }, async () => {
     assert.equal((await readFile(result.path)).toString('ascii', 0, 4), 'wOF2')
   } finally {
     await rm(cache, { recursive: true, force: true })
+  }
+})
+
+test('prepared font preserves native cache keys and cold output across pages', async () => {
+  const legacyCache = await mkdtemp(path.join(os.tmpdir(), 'cjk-legacy-'))
+  const preparedCache = await mkdtemp(path.join(os.tmpdir(), 'cjk-prepared-'))
+  try {
+    const input = Buffer.from(font)
+    const prepared = new FontSubsetter(input)
+    input.fill(0) // Prepared data is owned, not borrowed from a mutable JS buffer.
+    for (const text of ['Hello, 世界', 'English café — © 2026', '0123456789']) {
+      const legacy = subsetFont(font, text, legacyCache)
+      const result = prepared.subset(text, preparedCache)
+      assert.equal(result.hash, legacy.hash)
+      assert.equal(result.cacheHit, false)
+      assert.deepEqual(await readFile(result.path), await readFile(legacy.path))
+      assert.equal(prepared.subset([...text].reverse().join(''), preparedCache).cacheHit, true)
+      await rm(result.path)
+      assert.equal(prepared.subset(text, preparedCache).cacheHit, false)
+    }
+    assert.throws(() => prepared.subset('', preparedCache), /at least one character/)
+    assert.throws(() => new FontSubsetter(Buffer.from('bad font')), /unsupported font/)
+    assert.throws(() => new FontSubsetter(font, 1), /faceIndex/)
+    const packed = new FontSubsetter(woff1(font))
+    const legacy = subsetFont(woff1(font), 'Packed café', legacyCache)
+    const result = packed.subset('Packed café', preparedCache)
+    assert.equal(result.hash, legacy.hash)
+    assert.deepEqual(await readFile(result.path), await readFile(legacy.path))
+  } finally {
+    await rm(legacyCache, { recursive: true, force: true })
+    await rm(preparedCache, { recursive: true, force: true })
   }
 })
