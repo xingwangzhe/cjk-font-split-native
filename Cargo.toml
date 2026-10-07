@@ -24,9 +24,11 @@ serde_json = "1.0"
 napi-build = "2.5.0"
 
 [profile.release]
-lto = true
-strip = "symbols"
+opt-level = 3
+lto = "fat"
 codegen-units = 1
+incremental = false
+strip = "symbols"
 
 [patch.crates-io]
 woofwoof = { path = "vendor/woofwoof" }

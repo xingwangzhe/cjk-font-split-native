@@ -94,3 +94,7 @@ const second = prepared.subset('Second page 第二页', cacheDir)
 | adler2 的许可选项                        | 0BSD                                            | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
 
 `LICENSES/` 与完整第三方清单均随 npm 包发布。字体输入、子集和格式转换结果仍遵循原字体许可；本工具的 MIT 不能覆盖字体许可、保留名称或再分发条件。测试字体按各自许可分发，且不进入 npm 包。GitHub 主许可识别与上述组件清单是两项独立信息。
+
+## Runtime-focused native release builds
+
+CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).

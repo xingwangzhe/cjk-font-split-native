@@ -74,3 +74,7 @@ JS 의존성과 스크립트는 Bun, Vite 플러그인 타입과 선언 생성�
 | License option for adler2                              | 0BSD                                            | [LICENSE-0BSD.txt](LICENSES/LICENSE-0BSD.txt)                 |
 
 The npm package ships `LICENSES/` and the complete third-party notice file. Input fonts and generated subsets retain their font-specific licenses, reserved names and redistribution conditions; this tool’s MIT does not replace them. Test fonts retain their own licenses and are excluded from npm. GitHub’s primary-license display is separate from this component inventory.
+
+## Runtime-focused native release builds
+
+CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).

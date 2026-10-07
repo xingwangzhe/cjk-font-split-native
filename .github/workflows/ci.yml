@@ -66,6 +66,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+          components: llvm-tools-preview
       - run: bun install --frozen-lockfile
       - uses: mlugg/setup-zig@v2
         if: contains(matrix.target, 'linux')
@@ -75,19 +76,21 @@ jobs:
         if: contains(matrix.target, 'linux')
         with:
           tool: cargo-zigbuild
-      - name: Build with matching C and C++ sysroot
+      - name: Build PGO release with matching C and C++ sysroot
         shell: bash
         run: |
           if [[ "${{ matrix.target }}" == *-linux-gnu ]]; then
-            cargo zigbuild --locked --release --target "${{ matrix.target }}.2.28"
-            case "${{ matrix.target }}" in
-              x86_64-*) platform=linux-x64-gnu ;;
-              aarch64-*) platform=linux-arm64-gnu ;;
-            esac
-            cp "target/${{ matrix.target }}/release/libcjk_font_split_native.so" "cjk-font-split-native.${platform}.node"
+            bun run build:pgo --select --target "${{ matrix.target }}" --zig-glibc 2.28
           else
-            bun run build --target ${{ matrix.target }} ${{ matrix.args }}
+            bun run build:pgo --select --target ${{ matrix.target }} ${{ matrix.args }}
           fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pgo-${{ matrix.target }}
+          path: |
+            target/pgo/${{ matrix.target }}/build.json
+            target/pgo/${{ matrix.target }}/benchmark.json
+          if-no-files-found: error
       - name: Reject accidental host glibc C23 imports
         if: contains(matrix.target, 'linux-gnu')
         shell: bash

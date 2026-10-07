@@ -75,7 +75,9 @@
     "test": "node --experimental-strip-types --test test/*.test.mts",
     "benchmark": "node benchmark/run.mts",
     "ci": "bun run format:check && bun run lint && cargo fmt -- --check && bun run build:ts && bun run typecheck && cargo test --locked && cargo clippy --locked -- -D warnings && bun run build && bun run test && bun run benchmark",
-    "release:local": "node scripts/publish-local.mts"
+    "release:local": "node scripts/publish-local.mts",
+    "build:pgo": "node scripts/build-pgo.mjs",
+    "benchmark:pgo": "node scripts/build-pgo.mjs --compare"
   },
   "peerDependencies": {
     "vite": ">=6"
