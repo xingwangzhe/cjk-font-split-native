@@ -6,6 +6,8 @@ Vite용 Rust + N-API 다국어 글꼴 서브셋 도구이며 CJK를 중점 지�
 
 이 패키지는 ESM API만 제공합니다. `import`를 사용하세요. CommonJS `require()` 진입점은 내보내지 않습니다. NAPI-RS가 Rust API에서 네이티브 ESM 로더와 TypeScript 선언 파일을 생성합니다.
 
+루트 npm 패키지에는 ESM 로더, 타입 선언, Vite 플러그인, 라이선스 정보가 포함됩니다. CI는 네이티브 바인딩을 플랫폼별 스코프 패키지로 게시하며, npm은 현재 환경에 맞는 optional dependency만 설치합니다.
+
 ## Vite 플러그인
 
 ```ts

@@ -6,6 +6,8 @@ Vite 向けの Rust + N-API 多言語フォントサブセットツールで、C
 
 本パッケージの API は ESM のみです。`import` を使用してください。CommonJS の `require()` エントリーポイントは公開していません。NAPI-RS が Rust API からネイティブ ESM ローダーと TypeScript 宣言を生成します。
 
+ルート npm パッケージには ESM ローダー、型宣言、Vite プラグイン、ライセンス情報が含まれます。CI はネイティブバインディングをプラットフォーム別のスコープ付きパッケージとして公開し、npm は現在の環境に合う optional dependency のみをインストールします。
+
 ## Vite プラグイン
 
 ```ts

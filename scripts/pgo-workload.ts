@@ -1,20 +1,15 @@
 import { performance } from 'node:perf_hooks'
+import { createRequire } from 'node:module'
 import { dirname, resolve, join, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const bindingPath = process.env.PGO_BINDING_PATH
 if (!bindingPath) throw new Error('PGO_BINDING_PATH must point to the binding under measurement')
-process.env.NAPI_RS_NATIVE_LIBRARY_PATH = bindingPath
-const native = await import('../index.js')
+const native = createRequire(import.meta.url)(bindingPath)
 const training = process.argv[2] === 'train'
 const results: Record<string, number[]> = {}
 let sink = 0
-async function measure(
-  name: string,
-  fn: () => unknown | Promise<unknown>,
-  iterations = 1,
-  calibrate = true,
-) {
+async function measure(name: string, fn: () => unknown | Promise<unknown>, iterations = 1, calibrate = true) {
   for (let i = 0; i < 2; i++) await fn()
   if (!training && calibrate) {
     const started = performance.now()
@@ -114,4 +109,5 @@ try {
   rmSync(cache, { recursive: true, force: true })
 }
 if (!Number.isFinite(sink)) throw new Error('Non-finite workload output')
+if (training) native.flushPgoProfile()
 console.log(JSON.stringify(results))

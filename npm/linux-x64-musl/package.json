@@ -8,7 +8,7 @@
   "files": [
     "cjk-font-split-native.linux-x64-musl.node"
   ],
-  "description": "Native Rust multilingual font subsetting and persistent cache for Vite builds",
+  "description": "Native Rust CJK font subsetting and persistent Vite caching. Installs only the native binary for your platform.",
   "keywords": [
     "font-subset",
     "cjk",

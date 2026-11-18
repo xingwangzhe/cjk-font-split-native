@@ -9,6 +9,9 @@ description = "Native multilingual font subsetting for Vite"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+pgo = []
+
 [dependencies]
 blake3 = "1.8.7"
 allsorts = { version = "0.17.0", default-features = false, features = ["flate2_rust"] }

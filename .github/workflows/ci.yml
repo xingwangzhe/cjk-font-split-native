@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ["v*"]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -38,13 +38,13 @@ jobs:
         include:
           - host: macos-15-intel
             target: x86_64-apple-darwin
-            args: ""
+            args: ''
           - host: macos-latest
             target: aarch64-apple-darwin
-            args: ""
+            args: ''
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            args: ""
+            args: ''
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             args: --use-napi-cross

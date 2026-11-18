@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const output = resolve(process.argv[2])
 for (const stage of ['baseline', 'optimized']) {
-  const warm = spawnSync(process.execPath, ['--experimental-strip-types', join(root, 'scripts', 'pgo-workload.ts'), 'benchmark'], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, PGO_BINDING_PATH: join(output, `${stage}.node`), RAYON_NUM_THREADS: '4' },
-  })
+  const warm = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', join(root, 'scripts', 'pgo-workload.ts'), 'benchmark'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, PGO_BINDING_PATH: join(output, `${stage}.node`), RAYON_NUM_THREADS: '4' },
+    },
+  )
   if (warm.error || warm.status !== 0) throw warm.error ?? new Error(warm.stderr)
 }
 type WorkloadSamples = Record<string, number[]>
@@ -23,11 +27,15 @@ const processOrder: ('baseline' | 'optimized')[] = [
   'optimized',
 ]
 for (const stage of processOrder) {
-  const result = spawnSync(process.execPath, ['--experimental-strip-types', join(root, 'scripts', 'pgo-workload.ts'), 'benchmark'], {
-    cwd: root,
-    encoding: 'utf8',
-    env: { ...process.env, PGO_BINDING_PATH: join(output, `${stage}.node`), RAYON_NUM_THREADS: '4' },
-  })
+  const result = spawnSync(
+    process.execPath,
+    ['--experimental-strip-types', join(root, 'scripts', 'pgo-workload.ts'), 'benchmark'],
+    {
+      cwd: root,
+      encoding: 'utf8',
+      env: { ...process.env, PGO_BINDING_PATH: join(output, `${stage}.node`), RAYON_NUM_THREADS: '4' },
+    },
+  )
   if (result.error || result.status !== 0) throw result.error ?? new Error(result.stderr)
   samples[stage].push(JSON.parse(result.stdout))
 }

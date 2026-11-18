@@ -107,12 +107,24 @@ const build = (stage: string, flag?: string) => {
   const started = Date.now()
   if (glibc) {
     if (!target.endsWith('-linux-gnu')) throw new Error('--zig-glibc requires a Linux GNU target')
-    run('cargo', ['zigbuild', '--locked', '--release', '--target', `${target}.${glibc}`], env)
+    run(
+      'cargo',
+      [
+        'zigbuild',
+        '--locked',
+        '--release',
+        '--target',
+        `${target}.${glibc}`,
+        ...(stage === 'instrumented' ? ['--features', 'pgo'] : []),
+      ],
+      env,
+    )
     const libName = pkg.napi.binaryName.replaceAll('-', '_')
     copyFileSync(join(env.CARGO_TARGET_DIR, target, 'release', `lib${libName}.so`), binary)
   } else {
     const napiArgs = ['x', 'napi', 'build', '--platform', '--release', '--target', target]
-    if (pkg.napi.binaryName === 'mermaid-rs') napiArgs.push('--no-js')
+    if (stage === 'instrumented') napiArgs.push('--features', 'pgo')
+    if (stage === 'instrumented' || pkg.napi.binaryName === 'mermaid-rs') napiArgs.push('--no-js')
     if (pkg.napi.binaryName === 'cjk-font-split-native')
       napiArgs.push('--esm', '--js', 'index.js', '--dts', 'index.d.ts')
     run('bun', [...napiArgs, ...args, '--', '--locked'], env)

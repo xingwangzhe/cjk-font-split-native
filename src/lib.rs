@@ -51,6 +51,23 @@ pub fn subset_font(
   })
 }
 
+#[cfg(feature = "pgo")]
+#[napi]
+pub fn flush_pgo_profile() -> Result<()> {
+  unsafe extern "C" {
+    fn __llvm_profile_write_file() -> i32;
+  }
+  let status = unsafe { __llvm_profile_write_file() };
+  if status == 0 {
+    Ok(())
+  } else {
+    Err(Error::new(
+      Status::GenericFailure,
+      "LLVM profile flush failed",
+    ))
+  }
+}
+
 /// Reuse a validated font and its BLAKE3 prefix across a multi-page build.
 #[napi]
 pub struct FontSubsetter {
