@@ -109,6 +109,8 @@ export function cjkFontSplit(options: CjkFontSplitOptions): Plugin {
     },
     async closeBundle() {
       const dir = outputDir
+      // Rolldown skips emitting `dist/` for multi-page fixtures with no JS chunks.
+      await mkdir(dir, { recursive: true })
       const pages = await htmlFiles(dir)
       const fontBytes = await Promise.all(
         options.fonts.map(async (font) => ({
