@@ -48,8 +48,6 @@ console.log(result) // { path, hash, cacheHit, bytes, characters }
 
 使用 Bun 管理 JS 依赖和脚本，TypeScript 7 为 Vite 插件提供类型并生成声明，Cargo 管理 Rust 依赖和构建。`bun run ci` 执行格式检查、lint、TypeScript 编译、Rust 测试与 Clippy、N-API 发布构建、集成测试和基准测试。GitHub Actions 构建并测试六个目标平台；推送匹配的 `vX.Y.Z` 标签后，工作流会在 CI 通过后使用 npm Trusted Publishing（OIDC）发布完整包，详见 [工作流](.github/workflows/ci.yml)。
 
-本地完整发布时，可用 `gh run download <run-id> --dir artifacts` 下载六个平台的 CI 产物，再运行 `bun run release:local`。该脚本会校验二进制、执行 `bun pm pack --dry-run`，并通过 Bun 发布。
-
 运行 `bun run benchmark` 可对比冷缓存原生分片、热缓存命中、跨页面重复分片、不同字符集以及 `subset-font` WASM。基准执行三次并报告中位耗时和输出体积；结果会受硬件影响，仅供参考。
 
 测试字体 DejaVu Sans 位于 `test/fixtures/`，遵循上游许可，且不会被打包进 npm 发布内容。
@@ -99,4 +97,4 @@ const second = prepared.subset('Second page 第二页', cacheDir)
 
 ## Runtime-focused native release builds
 
-CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).
+CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [the performance guide](docs/performance.md).

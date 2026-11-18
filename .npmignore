@@ -1,0 +1,21 @@
+# Keep runtime files, localized READMEs, licenses, and built dist only.
+benchmark/
+reports/
+scripts/
+test/
+vendor/
+src/
+npm/
+target/
+artifacts/
+.github/
+.gitignore
+.npmignore
+bun.lock
+Cargo.toml
+Cargo.lock
+build.rs
+rustfmt.toml
+tsconfig*.json
+*.profraw
+*.profdata

@@ -48,8 +48,6 @@ The cache key is derived from the font's BLAKE3 digest, TTC face index, sorted u
 
 Use Bun for JS dependencies and scripts, TypeScript 7 for Vite plugin types and declaration output, and Cargo for Rust dependencies and builds. `bun run ci` runs formatting, lint, TypeScript compilation, Rust tests and Clippy, the N-API release build, integration tests, and a benchmark. GitHub Actions builds and tests six targets; pushing a matching `vX.Y.Z` tag publishes the complete package through npm Trusted Publishing (OIDC) after CI passes. See the [workflow](.github/workflows/ci.yml).
 
-For a full local release, download all six CI artifacts with `gh run download <run-id> --dir artifacts`, then run `bun run release:local`. The script validates the binaries, runs `bun pm pack --dry-run`, and publishes with Bun.
-
 Run `bun run benchmark` to compare cold native subsets, warm cache hits, repeated subsets across pages, unique character sets, and `subset-font` WASM. It reports medians from three runs and output sizes; results depend on the hardware and are informational.
 
 The DejaVu Sans test font lives in `test/fixtures/` under its upstream license and is excluded from the npm package.
@@ -99,4 +97,4 @@ The npm package ships `LICENSES/` and the complete third-party notice file. Inpu
 
 ## Runtime-focused native release builds
 
-CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).
+CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [the performance guide](docs/performance.md).

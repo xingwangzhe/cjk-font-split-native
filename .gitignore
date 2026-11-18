@@ -4,5 +4,10 @@ dist/
 *.node
 *.tgz
 artifacts/
+benchmark/reports/
+reports/
+benchmark-results/
+*.profraw
+*.profdata
 .yarn/
 .husky/

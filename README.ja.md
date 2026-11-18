@@ -48,8 +48,6 @@ console.log(result) // { path, hash, cacheHit, bytes, characters }
 
 JS の依存関係とスクリプトには Bun、Vite プラグインの型と宣言生成には TypeScript 7、Rust の依存関係とビルドには Cargo を使用します。`bun run ci` はフォーマット、lint、TypeScript コンパイル、Rust テストと Clippy、N-API リリースビルド、統合テスト、ベンチマークを実行します。GitHub Actions は 6 つのターゲットをビルド・テストします。`vX.Y.Z` 形式のタグを push すると、CI 成功後に npm Trusted Publishing（OIDC）で全プラットフォーム対応パッケージを公開します。詳しくは[ワークフロー](.github/workflows/ci.yml)を参照してください。
 
-ローカルで完全なリリースを行うには、`gh run download <run-id> --dir artifacts` で CI の 6 プラットフォーム分の成果物を取得し、`bun run release:local` を実行します。スクリプトはバイナリを検証し、`bun pm pack --dry-run` を実行した後、Bun で公開します。
-
 `bun run benchmark` では、ネイティブのコールドキャッシュ、ウォームキャッシュ、ページ間での重複、異なる文字セット、および `subset-font` WASM を比較します。3 回の実行の中央値と出力サイズを表示します。結果はハードウェアに依存するため、参考値として扱ってください。
 
 テスト用の DejaVu Sans フォントは上流ライセンスに従って `test/fixtures/` に置かれており、npm パッケージには含まれません。
@@ -79,4 +77,4 @@ The npm package ships `LICENSES/` and the complete third-party notice file. Inpu
 
 ## Runtime-focused native release builds
 
-CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [scripts/PERFORMANCE.md](scripts/PERFORMANCE.md).
+CI release binaries use O3, full LTO, one code-generation unit, and disabled incremental compilation. CI trains and measures a profile-guided optimization (PGO) candidate on each platform, selecting it only when the comparison passes; otherwise it publishes the unprofiled release. The existing CPU instruction baseline is preserved. Use `bun run build:pgo` for the optimized native build and `bun run benchmark:pgo` for a comparison against an unprofiled release. Install the matching LLVM tools with `rustup component add llvm-tools-preview`. Training inputs, measurement limits, and platform requirements are documented in [the performance guide](docs/performance.md).
