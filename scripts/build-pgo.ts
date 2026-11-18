@@ -5,15 +5,17 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+const pkg: { name: string; version: string; napi: { binaryName: string; targets: string[] } } = JSON.parse(
+  readFileSync(join(root, 'package.json'), 'utf8'),
+)
 const args = process.argv.slice(2)
-const take = (name) => {
+const take = (name: string) => {
   const index = args.indexOf(name)
   if (index < 0) return undefined
   if (!args[index + 1] || args[index + 1].startsWith('--')) throw new Error(`Missing value for ${name}`)
   return args.splice(index, 2)[1]
 }
-const capture = (command, values) => {
+const capture = (command: string, values: string[]) => {
   const result = spawnSync(command, values, { cwd: root, encoding: 'utf8' })
   if (result.error || result.status !== 0) throw result.error ?? new Error(result.stderr)
   return result.stdout.trim()
@@ -33,7 +35,7 @@ const musl = target.endsWith('-musl')
 if (target !== host && !(musl && host === 'x86_64-unknown-linux-gnu')) {
   throw new Error(`PGO training needs a matching runner: host=${host}, target=${target}`)
 }
-const labels = {
+const labels: Record<string, string> = {
   'x86_64-unknown-linux-gnu': 'linux-x64-gnu',
   'aarch64-unknown-linux-gnu': 'linux-arm64-gnu',
   'x86_64-unknown-linux-musl': 'linux-x64-musl',
@@ -62,7 +64,7 @@ const originalFlags =
   process.env.CARGO_ENCODED_RUSTFLAGS?.split('\x1f') ?? process.env.RUSTFLAGS?.trim().split(/\s+/).filter(Boolean) ?? []
 if (originalFlags.some((arg) => /profile-(generate|use)/.test(arg)))
   throw new Error('Use build:pgo without external PGO flags')
-const run = (command, values, env = {}) => {
+const run = (command: string, values: string[], env: NodeJS.ProcessEnv = {}) => {
   const result = spawnSync(command, values, { cwd: root, stdio: 'inherit', env: { ...process.env, ...env } })
   if (result.error || result.status !== 0)
     throw result.error ?? new Error(`${command} exited with ${result.status} (signal ${result.signal ?? 'none'})`)
@@ -87,8 +89,8 @@ const nativeEnv = target.endsWith('-msvc')
         return [key, `${process.env[key] ?? ''} -fno-profile-generate -fno-profile-instr-generate -fno-profile-use`]
       }),
     )
-const stages = []
-const build = (stage, flag) => {
+const stages: { stage: string; seconds: number }[] = []
+const build = (stage: string, flag?: string) => {
   console.info(`PGO ${stage}: ${target}`)
   const env = {
     ...zigEnv,
@@ -112,7 +114,7 @@ const build = (stage, flag) => {
     const napiArgs = ['x', 'napi', 'build', '--platform', '--release', '--target', target]
     if (pkg.napi.binaryName === 'mermaid-rs') napiArgs.push('--no-js')
     if (pkg.napi.binaryName === 'cjk-font-split-native')
-      napiArgs.push('--esm', '--js', 'index.mjs', '--dts', 'index.d.mts')
+      napiArgs.push('--esm', '--js', 'index.js', '--dts', 'index.d.ts')
     run('bun', [...napiArgs, ...args, '--', '--locked'], env)
   }
   if (!existsSync(binary)) throw new Error(`Missing native binary: ${binary}`)
@@ -139,11 +141,12 @@ try {
       'RAYON_NUM_THREADS=4',
       'node:24-alpine',
       'node',
-      'scripts/pgo-workload.mjs',
+      '--experimental-strip-types',
+      'scripts/pgo-workload.ts',
       'train',
     ])
   } else {
-    run(process.execPath, ['scripts/pgo-workload.mjs', 'train'], {
+    run(process.execPath, ['--experimental-strip-types', 'scripts/pgo-workload.ts', 'train'], {
       LLVM_PROFILE_FILE: profilePattern,
       PGO_BINDING_PATH: binary,
       RAYON_NUM_THREADS: '4',
@@ -213,11 +216,12 @@ if (compare) {
       'RAYON_NUM_THREADS=4',
       'node:24-alpine',
       'node',
-      'scripts/compare-pgo.mjs',
+      '--experimental-strip-types',
+      'scripts/compare-pgo.ts',
       `/work/target/pgo/${target}`,
     ])
   } else {
-    run(process.execPath, ['scripts/compare-pgo.mjs', output])
+    run(process.execPath, ['--experimental-strip-types', 'scripts/compare-pgo.ts', output])
   }
 }
 if (select) {
@@ -225,7 +229,9 @@ if (select) {
   // Require a gain larger than minor timing noise, and avoid material
   // regressions in non-trivial workloads in this representative corpus.
   const improves = report.geometricMeanSpeedup >= 1.03
-  const noLargeRegression = report.results.every((result) => result.baselineMs < 0.02 || result.speedup >= 0.85)
+  const noLargeRegression = report.results.every(
+    (result: { baselineMs: number; speedup: number }) => result.baselineMs < 0.02 || result.speedup >= 0.85,
+  )
   const selected = improves && noLargeRegression ? 'optimized' : 'baseline'
   copyFileSync(join(output, `${selected}.node`), binary)
   const record = JSON.parse(readFileSync(join(output, 'build.json'), 'utf8'))

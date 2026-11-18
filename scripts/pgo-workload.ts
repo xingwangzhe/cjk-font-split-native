@@ -1,13 +1,20 @@
-import { createRequire } from 'node:module'
 import { performance } from 'node:perf_hooks'
 import { dirname, resolve, join, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const native = createRequire(import.meta.url)(process.env.PGO_BINDING_PATH)
+const bindingPath = process.env.PGO_BINDING_PATH
+if (!bindingPath) throw new Error('PGO_BINDING_PATH must point to the binding under measurement')
+process.env.NAPI_RS_NATIVE_LIBRARY_PATH = bindingPath
+const native = await import('../index.js')
 const training = process.argv[2] === 'train'
-const results = {}
+const results: Record<string, number[]> = {}
 let sink = 0
-async function measure(name, fn, iterations = 1, calibrate = true) {
+async function measure(
+  name: string,
+  fn: () => unknown | Promise<unknown>,
+  iterations = 1,
+  calibrate = true,
+) {
   for (let i = 0; i < 2; i++) await fn()
   if (!training && calibrate) {
     const started = performance.now()
@@ -28,7 +35,7 @@ const { tmpdir } = await import('node:os')
 const cache = mkdtempSync(join(tmpdir(), 'font-pgo-'))
 let index = 0
 try {
-  const files = ['DejaVuSans.ttf', 'SyntheticCJK.ttf', 'SyntheticCJK.otf'].map((file) =>
+  const files = ['DejaVuSans.ttf', 'SyntheticCJK.ttf', 'SyntheticCJK.otf'].map((file: string) =>
     join(root, 'test', 'fixtures', file),
   )
   if (process.env.CJK_BENCH_FONT) files.push(resolve(process.env.CJK_BENCH_FONT))

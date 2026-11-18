@@ -41,7 +41,7 @@ jobs:
           LLVM_PROFILE_FILE: ${{ github.workspace }}/target/pgo/x86_64-unknown-linux-gnu/raw/debug-%m-%p.profraw
         run: |
           mkdir -p target/pgo-diagnose
-          gdb --batch -ex 'set pagination off' -ex run -ex 'thread apply all bt' -ex 'info sharedlibrary' --args node scripts/pgo-workload.mjs train > target/pgo-diagnose/backtrace.txt 2>&1
+          gdb --batch -ex 'set pagination off' -ex run -ex 'thread apply all bt' -ex 'info sharedlibrary' --args bun run scripts/pgo-workload.ts train > target/pgo-diagnose/backtrace.txt 2>&1
           cat target/pgo-diagnose/backtrace.txt
           nm -D target/pgo/x86_64-unknown-linux-gnu/instrumented.node > target/pgo-diagnose/addon-symbols.txt
           nm -D "$(command -v node)" > target/pgo-diagnose/node-symbols.txt

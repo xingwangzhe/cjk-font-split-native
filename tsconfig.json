@@ -12,5 +12,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["src/vite.mts"]
+  "include": ["src/vite.ts"]
 }

@@ -6,6 +6,8 @@
 
 本包仅提供 ESM API。请使用 `import`；包不导出 CommonJS `require()` 入口。NAPI-RS 根据 Rust API 生成原生 ESM 加载器和 TypeScript 声明。
 
+主 npm 包包含 ESM 加载器、类型声明、Vite 插件和许可文件。CI 将原生绑定分别发布到作用域平台子包；npm 只安装当前平台对应的可选依赖。
+
 ## Vite 插件
 
 ```ts

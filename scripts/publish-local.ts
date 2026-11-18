@@ -7,6 +7,8 @@ const run = (command: string, args: string[]) => {
 }
 
 run('bun', ['run', 'ci'])
-run('node', ['scripts/assemble-artifacts.mjs'])
+run('bun', ['run', 'scripts/assemble-artifacts.ts'])
+run('bunx', ['--no-install', 'napi', 'artifacts', '--output-dir', '.', '--npm-dir', 'npm'])
 run('bun', ['pm', 'pack', '--dry-run'])
-run('bun', ['publish', '--access', 'public'])
+run('bunx', ['--no-install', 'napi', 'pre-publish', '--npm-dir', 'npm', '--tag-style', 'npm', '--no-gh-release'])
+run('npm', ['publish', '--ignore-scripts', '--access', 'public'])

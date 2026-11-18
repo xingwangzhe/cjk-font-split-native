@@ -1,0 +1,41 @@
+{
+  "name": "@xingwangzhe/cjk-font-split-native-linux-x64-musl",
+  "version": "0.4.12",
+  "cpu": [
+    "x64"
+  ],
+  "main": "cjk-font-split-native.linux-x64-musl.node",
+  "files": [
+    "cjk-font-split-native.linux-x64-musl.node"
+  ],
+  "description": "Native Rust multilingual font subsetting and persistent cache for Vite builds",
+  "keywords": [
+    "font-subset",
+    "cjk",
+    "woff2",
+    "vite",
+    "vite-plugin",
+    "napi-rs",
+    "rust",
+    "font-split"
+  ],
+  "author": "xingwangzhe <xingwangzhe@outlook.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xingwangzhe/cjk-font-split-native.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "os": [
+    "linux"
+  ],
+  "libc": [
+    "musl"
+  ]
+}

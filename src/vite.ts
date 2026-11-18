@@ -2,7 +2,7 @@ import { readFile, readdir, mkdir, copyFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parse, type DefaultTreeAdapterMap } from 'parse5'
 import type { Plugin } from 'vite'
-import { FontSubsetter } from '../index.mjs'
+import { FontSubsetter } from '../index.js'
 
 export interface CjkFont {
   src: string

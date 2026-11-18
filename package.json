@@ -1,19 +1,19 @@
 {
   "name": "@xingwangzhe/cjk-font-split-native",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "description": "Native Rust multilingual font subsetting and persistent cache for Vite builds",
   "type": "module",
-  "main": "index.mjs",
-  "types": "index.d.mts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "exports": {
     ".": {
-      "types": "./index.d.mts",
-      "import": "./index.mjs",
-      "default": "./index.mjs"
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "default": "./index.js"
     },
     "./vite": {
-      "types": "./dist/vite.d.mts",
-      "import": "./dist/vite.mjs"
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
     }
   },
   "license": "MIT",
@@ -33,10 +33,9 @@
     "font-split"
   ],
   "files": [
-    "index.mjs",
-    "index.d.mts",
+    "index.js",
+    "index.d.ts",
     "dist",
-    "cjk-font-split-native.*.node",
     "README.md",
     "README.en.md",
     "README.ja.md",
@@ -64,20 +63,21 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "build": "napi build --platform --release --esm --js index.mjs --dts index.d.mts",
+    "build": "napi build --platform --release --esm --js index.js --dts index.d.ts",
     "build:ts": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.test.json",
-    "build:debug": "napi build --platform --esm --js index.mjs --dts index.d.mts",
-    "artifacts:assemble": "node scripts/assemble-artifacts.mts",
+    "build:debug": "napi build --platform --esm --js index.js --dts index.d.ts",
+    "artifacts:assemble": "bun run scripts/assemble-artifacts.ts",
     "format": "oxfmt --write README*.md benchmark scripts src test package.json tsconfig*.json .github/workflows/ci.yml && cargo fmt",
     "format:check": "oxfmt --check README*.md benchmark scripts src test package.json tsconfig*.json .github/workflows/ci.yml && cargo fmt -- --check",
     "lint": "oxlint .",
-    "test": "node --experimental-strip-types --test test/*.test.mts",
-    "benchmark": "node benchmark/run.mts",
+    "test": "node --experimental-strip-types --test test/*.test.ts",
+    "benchmark": "bun run benchmark/run.ts",
     "ci": "bun run format:check && bun run lint && cargo fmt -- --check && bun run build:ts && bun run typecheck && cargo test --locked && cargo clippy --locked -- -D warnings && bun run build && bun run test && bun run benchmark",
-    "release:local": "node scripts/publish-local.mts",
-    "build:pgo": "node scripts/build-pgo.mjs",
-    "benchmark:pgo": "node scripts/build-pgo.mjs --compare"
+    "release:local": "bun run scripts/publish-local.ts",
+    "build:pgo": "bun run scripts/build-pgo.ts",
+    "benchmark:pgo": "bun run scripts/build-pgo.ts --compare",
+    "prepublishOnly": "napi pre-publish --npm-dir npm --tag-style npm --no-gh-release"
   },
   "peerDependencies": {
     "vite": ">=6"
@@ -94,5 +94,16 @@
   },
   "dependencies": {
     "parse5": "^8.1.1"
+  },
+  "workspaces": [
+    "npm/*"
+  ],
+  "optionalDependencies": {
+    "@xingwangzhe/cjk-font-split-native-linux-x64-gnu": "workspace:*",
+    "@xingwangzhe/cjk-font-split-native-win32-x64-msvc": "workspace:*",
+    "@xingwangzhe/cjk-font-split-native-linux-x64-musl": "workspace:*",
+    "@xingwangzhe/cjk-font-split-native-linux-arm64-gnu": "workspace:*",
+    "@xingwangzhe/cjk-font-split-native-darwin-arm64": "workspace:*",
+    "@xingwangzhe/cjk-font-split-native-darwin-x64": "workspace:*"
   }
 }

@@ -6,6 +6,8 @@ Rust + N-API multilingual font subsetting for Vite, with a focus on CJK. It scan
 
 The package exposes an ESM-only API. Use `import`; CommonJS `require()` is not exported. NAPI-RS generates the native ESM loader and TypeScript declarations from the Rust API.
 
+The root npm package contains the ESM loader, declarations, Vite plugin, and license notices. CI publishes each native binding in a scoped platform package; npm installs only the matching optional dependency.
+
 ## Vite plugin
 
 ```ts

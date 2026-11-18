@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -38,13 +38,13 @@ jobs:
         include:
           - host: macos-15-intel
             target: x86_64-apple-darwin
-            args: ''
+            args: ""
           - host: macos-latest
             target: aarch64-apple-darwin
-            args: ''
+            args: ""
           - host: windows-latest
             target: x86_64-pc-windows-msvc
-            args: ''
+            args: ""
           - host: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             args: --use-napi-cross
@@ -145,9 +145,9 @@ jobs:
         run: bun run test
       - name: Test GNU addon on older glibc and Node 22
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: docker run --rm -v "$PWD:/work" -w /work node:22-bullseye node --experimental-strip-types --test test/native.test.mts
+        run: docker run --rm -v "$PWD:/work" -w /work node:22-bullseye node --experimental-strip-types --test test/native.test.ts
       - if: matrix.musl
-        run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.mts
+        run: docker run --rm -v "$PWD:/work" -w /work node:24-alpine node --experimental-strip-types --test test/native.test.ts
   performance:
     name: Compare runtime against 0.4.9 and previous candidate
     permissions:
@@ -187,12 +187,12 @@ jobs:
           cp baseline-package/package/cjk-font-split-native.linux-x64-gnu.node target/runtime-comparison/baseline.node
           cp candidate/cjk-font-split-native.linux-x64-gnu.node target/runtime-comparison/optimized.node
           node -e "require('node:fs').writeFileSync('target/runtime-comparison/build.json', JSON.stringify({baseline: 'npm 0.4.9', candidate: process.env.GITHUB_SHA}))"
-          node scripts/compare-pgo.mjs target/runtime-comparison
+          bun run scripts/compare-pgo.ts target/runtime-comparison
           mkdir -p target/previous-comparison
           cp previous-candidate/cjk-font-split-native.linux-x64-gnu.node target/previous-comparison/baseline.node
           cp candidate/cjk-font-split-native.linux-x64-gnu.node target/previous-comparison/optimized.node
           node -e "require('node:fs').writeFileSync('target/previous-comparison/build.json', JSON.stringify({baseline: 'e39eff4 / CI 37591881431', candidate: process.env.GITHUB_SHA}))"
-          node scripts/compare-pgo.mjs target/previous-comparison
+          bun run scripts/compare-pgo.ts target/previous-comparison
       - uses: actions/upload-artifact@v7.0.1
         with:
           name: runtime-vs-0.4.9
@@ -227,6 +227,8 @@ jobs:
           path: native-artifacts
           merge-multiple: true
       - run: cp native-artifacts/*.node .
+      - name: Split platform packages
+        run: bunx --no-install napi artifacts --output-dir native-artifacts --npm-dir npm
       - name: Verify release version matches tag
         run: |
           PACKAGE_VERSION=$(node --input-type=module -e "import { readFileSync } from 'node:fs'; console.log(JSON.parse(readFileSync('package.json', 'utf8')).version)")
