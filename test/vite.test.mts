@@ -27,7 +27,7 @@ test('Vite plugin subsets visible Latin, symbols, and CJK while excluding metada
       logLevel: 'silent',
       build: {
         rollupOptions: {
-          input: [path.join(root, 'index.html'), path.join(root, 'other.html'), path.join(root, 'latin.html')],
+          input: ['index.html', 'other.html', 'latin.html'],
         },
       },
       plugins: [
